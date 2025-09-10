@@ -1,0 +1,451 @@
+/* Estilos para perfil del entrenador */
+
+.profile-page {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%);
+  min-height: 100vh;
+  font-family: 'Courier New', monospace;
+}
+
+/* Header del perfil */
+.profile-header {
+  background: #dc2626;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.profile-toolbar {
+  --background: #dc2626;
+  --color: white;
+  padding: 10px 20px;
+}
+
+.profile-title {
+  text-align: center;
+  font-weight: bold;
+}
+
+.profile-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.profile-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trainer-icon {
+  width: 28px;
+  height: 28px;
+  background: white;
+  border-radius: 50%;
+  border: 3px solid #dc2626;
+  position: relative;
+  animation: trainerPulse 3s ease-in-out infinite;
+}
+
+.trainer-icon::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  background: #dc2626;
+  border-radius: 50%;
+}
+
+.trainer-icon::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 6px;
+  background: white;
+  border-radius: 50%;
+}
+
+@keyframes trainerPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.profile-text {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: white;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  letter-spacing: 2px;
+}
+
+/* Contenido principal */
+.profile-content {
+  --background: transparent;
+  padding: 0;
+}
+
+.profile-body {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Tarjeta principal del perfil */
+.main-profile-card {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+  border: 4px solid #dc2626;
+  margin-bottom: 25px;
+  position: relative;
+  overflow: hidden;
+}
+
+.main-profile-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #dc2626, #ef4444, #dc2626);
+  animation: scanLine 4s linear infinite;
+}
+
+@keyframes scanLine {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.profile-main-info {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  padding: 25px;
+}
+
+.avatar-section {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.trainer-avatar {
+  width: 120px;
+  height: 120px;
+  border: 4px solid #dc2626;
+  box-shadow: 0 8px 16px rgba(220, 38, 38, 0.3);
+  transition: all 0.3s ease;
+}
+
+.trainer-avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 12px 24px rgba(220, 38, 38, 0.4);
+}
+
+.level-badge {
+  position: absolute;
+  bottom: -10px;
+  right: -10px;
+  background: #dc2626;
+  color: white;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.1rem;
+  border: 3px solid white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  animation: levelPulse 2s infinite;
+}
+
+@keyframes levelPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.level-number {
+  font-family: 'Courier New', monospace;
+}
+
+.trainer-details {
+  flex: 1;
+}
+
+.trainer-name {
+  color: #dc2626;
+  font-size: 2.2rem;
+  font-weight: bold;
+  margin: 0 0 10px 0;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.trainer-location {
+  color: #6b7280;
+  font-size: 1.1rem;
+  margin: 0 0 20px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+
+
+/* Tarjeta de información */
+.info-card {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+  border: 4px solid #dc2626;
+  margin-bottom: 25px;
+}
+
+.info-card ion-card-header {
+  background: #dc2626;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.info-card ion-card-title {
+  color: white;
+  font-size: 1.3rem;
+  font-weight: bold;
+  margin: 0;
+}
+
+.edit-btn {
+  --color: white;
+  --background: rgba(255, 255, 255, 0.2);
+  --border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.edit-btn:hover {
+  --background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.info-item {
+  --background: transparent;
+  --border-color: #e5e7eb;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.info-item:hover {
+  --background: #fef2f2;
+  transform: translateX(5px);
+}
+
+.info-item ion-icon {
+  color: #dc2626;
+  font-size: 1.2rem;
+}
+
+.info-item h3 {
+  color: #dc2626;
+  font-size: 1rem;
+  font-weight: bold;
+  margin: 0 0 5px 0;
+}
+
+.info-item p {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+
+/* Formulario de edición */
+.info-edit {
+  padding: 10px 0;
+}
+
+.info-edit ion-item {
+  --background: #fef2f2;
+  --border-color: #fecaca;
+  --border-radius: 8px;
+  margin-bottom: 15px;
+  --padding-start: 15px;
+  --padding-end: 15px;
+}
+
+.info-edit ion-label {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.info-edit ion-input,
+.info-edit ion-textarea {
+  --color: #374151;
+  --placeholder-color: #9ca3af;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-top: 25px;
+}
+
+.save-btn {
+  --background: #10b981;
+  --color: white;
+  --border-radius: 12px;
+  --padding-start: 20px;
+  --padding-end: 20px;
+  --padding-top: 12px;
+  --padding-bottom: 12px;
+  font-weight: 700;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  transition: all 0.3s ease;
+}
+
+.save-btn:hover {
+  --background: #059669;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+}
+
+.cancel-btn {
+  --color: #dc2626;
+  --border-color: #dc2626;
+  --border-radius: 12px;
+  --padding-start: 20px;
+  --padding-end: 20px;
+  --padding-top: 12px;
+  --padding-bottom: 12px;
+  font-weight: 700;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+}
+
+.cancel-btn:hover {
+  --background: #dc2626;
+  --color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .profile-body {
+    padding: 15px;
+  }
+  
+  .profile-main-info {
+    flex-direction: column;
+    text-align: center;
+    gap: 20px;
+  }
+  
+  .trainer-avatar {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .level-badge {
+    width: 35px;
+    height: 35px;
+    font-size: 1rem;
+  }
+  
+  .trainer-name {
+    font-size: 1.8rem;
+  }
+  
+  
+  .edit-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+}
+
+@media (max-width: 480px) {
+  .profile-body {
+    padding: 10px;
+  }
+  
+  .profile-main-info {
+    padding: 20px;
+  }
+  
+  .trainer-avatar {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .level-badge {
+    width: 30px;
+    height: 30px;
+    font-size: 0.9rem;
+  }
+  
+  .trainer-name {
+    font-size: 1.5rem;
+  }
+  
+  .trainer-location {
+    font-size: 1rem;
+  }
+  
+  
+  .info-item {
+    margin-bottom: 8px;
+  }
+  
+}
+
+/* Mejoras de accesibilidad */
+.edit-btn:focus {
+  outline: 3px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.save-btn:focus {
+  outline: 3px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.cancel-btn:focus {
+  outline: 3px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Estilos para dispositivos con pantalla táctil */
+@media (pointer: coarse) {
+  .edit-btn {
+    cursor: pointer;
+  }
+  
+  .save-btn {
+    cursor: pointer;
+  }
+  
+  .cancel-btn {
+    cursor: pointer;
+  }
+  
+  
+}
