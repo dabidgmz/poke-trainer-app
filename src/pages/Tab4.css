@@ -1,0 +1,677 @@
+/* Estilos para captura de Pokémon - Similar a Pokémon GO */
+
+.capture-page {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%);
+  min-height: 100vh;
+  font-family: 'Courier New', monospace;
+}
+
+/* Header de captura */
+.capture-header {
+  background: #dc2626;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.capture-toolbar {
+  --background: #dc2626;
+  --color: white;
+  padding: 10px 20px;
+}
+
+.capture-title {
+  text-align: center;
+  font-weight: bold;
+}
+
+.capture-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.capture-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pokeball-icon {
+  width: 28px;
+  height: 28px;
+  background: white;
+  border-radius: 50%;
+  border: 3px solid #dc2626;
+  position: relative;
+  animation: pokeballSpin 3s linear infinite;
+}
+
+.pokeball-icon::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #dc2626;
+  transform: translateY(-50%);
+}
+
+.pokeball-icon::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  background: #dc2626;
+  border-radius: 50%;
+  border: 2px solid white;
+}
+
+@keyframes pokeballSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.capture-text {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: white;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  letter-spacing: 2px;
+}
+
+/* Contenido principal */
+.capture-content {
+  --background: transparent;
+  padding: 0;
+}
+
+.capture-body {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Contenedor de cámara */
+.camera-container {
+  background: white;
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 25px;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+  border: 4px solid #dc2626;
+  position: relative;
+  overflow: hidden;
+}
+
+.camera-placeholder {
+  text-align: center;
+  padding: 40px 20px;
+  background: #fef2f2;
+  border-radius: 15px;
+  border: 2px dashed #dc2626;
+}
+
+.camera-icon {
+  font-size: 4rem;
+  color: #dc2626;
+  margin-bottom: 20px;
+  animation: pulse 2s infinite;
+}
+
+.camera-placeholder h3 {
+  color: #dc2626;
+  font-size: 1.5rem;
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+
+.camera-placeholder p {
+  color: #6b7280;
+  margin-bottom: 30px;
+  font-size: 1rem;
+}
+
+.start-camera-btn {
+  --background: #dc2626;
+  --color: white;
+  --border-radius: 15px;
+  --padding-start: 30px;
+  --padding-end: 30px;
+  --padding-top: 15px;
+  --padding-bottom: 15px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.3);
+  transition: all 0.3s ease;
+}
+
+.start-camera-btn:hover {
+  --background: #ef4444;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.4);
+}
+
+/* Vista de cámara */
+.camera-view {
+  position: relative;
+  border-radius: 15px;
+  overflow: hidden;
+  background: #000;
+}
+
+.camera-video {
+  width: 100%;
+  height: 400px;
+  object-fit: cover;
+  display: block;
+}
+
+.capture-canvas {
+  display: none;
+}
+
+/* Overlay de captura */
+.capture-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.qr-scanner-frame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 200px;
+  height: 200px;
+  border: 2px solid #dc2626;
+  border-radius: 15px;
+}
+
+.corner {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #dc2626;
+}
+
+.corner.top-left {
+  top: -3px;
+  left: -3px;
+  border-right: none;
+  border-bottom: none;
+  border-top-left-radius: 8px;
+}
+
+.corner.top-right {
+  top: -3px;
+  right: -3px;
+  border-left: none;
+  border-bottom: none;
+  border-top-right-radius: 8px;
+}
+
+.corner.bottom-left {
+  bottom: -3px;
+  left: -3px;
+  border-right: none;
+  border-top: none;
+  border-bottom-left-radius: 8px;
+}
+
+.corner.bottom-right {
+  bottom: -3px;
+  right: -3px;
+  border-left: none;
+  border-top: none;
+  border-bottom-right-radius: 8px;
+}
+
+.scan-line {
+  position: absolute;
+  top: 50%;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #dc2626, transparent);
+  transform: translateY(-50%);
+  animation: scanMove 2s linear infinite;
+}
+
+@keyframes scanMove {
+  0% { left: 10%; }
+  100% { left: 90%; }
+}
+
+/* Controles de cámara */
+.camera-controls {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 15px 25px;
+  border-radius: 25px;
+  backdrop-filter: blur(10px);
+}
+
+.control-btn {
+  --color: white;
+  --background: transparent;
+  --border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  font-size: 1.5rem;
+}
+
+.flash-btn:hover {
+  --background: rgba(255, 255, 255, 0.2);
+}
+
+.close-btn:hover {
+  --background: rgba(255, 0, 0, 0.2);
+}
+
+.capture-btn {
+  --background: #dc2626;
+  --color: white;
+  --border-radius: 50%;
+  width: 70px;
+  height: 70px;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+  animation: capturePulse 2s infinite;
+}
+
+@keyframes capturePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.pokeball-capture {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  background: white;
+  border-radius: 50%;
+  border: 3px solid #dc2626;
+}
+
+.pokeball-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: #dc2626;
+  border-radius: 50% 50% 0 0;
+}
+
+.pokeball-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: white;
+  border-radius: 0 0 50% 50%;
+}
+
+.pokeball-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  background: #dc2626;
+  border-radius: 50%;
+  border: 2px solid white;
+}
+
+/* Sección de Pokémon capturados */
+.captured-pokemon-section {
+  margin-bottom: 25px;
+}
+
+.section-title {
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 20px;
+  text-align: center;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.pokemon-capture-card {
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  border: 3px solid #dc2626;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.pokemon-capture-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 24px rgba(220, 38, 38, 0.3);
+}
+
+.pokemon-image-container {
+  position: relative;
+  text-align: center;
+  padding: 20px;
+  background: #fef2f2;
+}
+
+.pokemon-image-container img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+}
+
+.capture-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #10b981;
+  color: white;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  animation: captureSuccess 0.6s ease-out;
+}
+
+@keyframes captureSuccess {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.pokemon-name {
+  color: #dc2626;
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin: 10px 0 5px 0;
+  text-align: center;
+  text-transform: capitalize;
+}
+
+.pokemon-type {
+  --color: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 5px 0;
+  display: block;
+  text-align: center;
+}
+
+.pokemon-level {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin: 5px 0;
+  text-align: center;
+  font-weight: 600;
+}
+
+.capture-time {
+  color: #9ca3af;
+  font-size: 0.8rem;
+  margin: 5px 0 0 0;
+  text-align: center;
+}
+
+/* Sección de instrucciones */
+.instructions-section {
+  margin-bottom: 25px;
+}
+
+.instructions-card {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+  border: 4px solid #dc2626;
+  overflow: hidden;
+}
+
+.instructions-card ion-card-header {
+  background: #dc2626;
+  color: white;
+  text-align: center;
+}
+
+.instructions-card ion-card-title {
+  color: white;
+  font-size: 1.3rem;
+  font-weight: bold;
+}
+
+.instruction-steps {
+  padding: 20px 0;
+}
+
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  margin-bottom: 25px;
+  padding: 15px;
+  background: #fef2f2;
+  border-radius: 12px;
+  border-left: 4px solid #dc2626;
+}
+
+.step-number {
+  background: #dc2626;
+  color: white;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.step-content h4 {
+  color: #dc2626;
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin: 0 0 5px 0;
+}
+
+.step-content p {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .capture-body {
+    padding: 15px;
+  }
+  
+  .camera-container {
+    padding: 15px;
+  }
+  
+  .camera-video {
+    height: 300px;
+  }
+  
+  .qr-scanner-frame {
+    width: 150px;
+    height: 150px;
+  }
+  
+  .camera-controls {
+    gap: 20px;
+    padding: 12px 20px;
+  }
+  
+  .control-btn {
+    width: 45px;
+    height: 45px;
+    font-size: 1.2rem;
+  }
+  
+  .capture-btn {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .pokeball-capture {
+    width: 35px;
+    height: 35px;
+  }
+  
+  .pokemon-image-container img {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .step {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .step-number {
+    align-self: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .capture-body {
+    padding: 10px;
+  }
+  
+  .camera-container {
+    padding: 10px;
+  }
+  
+  .camera-placeholder {
+    padding: 30px 15px;
+  }
+  
+  .camera-icon {
+    font-size: 3rem;
+  }
+  
+  .camera-placeholder h3 {
+    font-size: 1.2rem;
+  }
+  
+  .camera-video {
+    height: 250px;
+  }
+  
+  .qr-scanner-frame {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .camera-controls {
+    gap: 15px;
+    padding: 10px 15px;
+  }
+  
+  .control-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+  
+  .capture-btn {
+    width: 55px;
+    height: 55px;
+  }
+  
+  .pokeball-capture {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .pokemon-image-container {
+    padding: 15px;
+  }
+  
+  .pokemon-image-container img {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .pokemon-name {
+    font-size: 1rem;
+  }
+  
+  .instruction-steps {
+    padding: 15px 0;
+  }
+  
+  .step {
+    padding: 12px;
+    margin-bottom: 20px;
+  }
+}
+
+/* Animaciones adicionales */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes capturePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* Mejoras de accesibilidad */
+.capture-btn:focus {
+  outline: 3px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.control-btn:focus {
+  outline: 3px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Estilos para dispositivos con pantalla táctil */
+@media (pointer: coarse) {
+  .capture-btn {
+    cursor: pointer;
+  }
+  
+  .control-btn {
+    cursor: pointer;
+  }
+  
+  .start-camera-btn {
+    cursor: pointer;
+  }
+}
