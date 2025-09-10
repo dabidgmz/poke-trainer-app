@@ -32,6 +32,8 @@ import {
   add,
   ellipse
 } from 'ionicons/icons';
+import { Camera, CameraResultType, CameraSource, PermissionStatus } from '@capacitor/camera';
+import '../types/capacitor';
 import './Tab4.css';
 
 interface CapturedPokemon {
@@ -56,6 +58,8 @@ const Tab4: React.FC = () => {
   const [showCaptureAlert, setShowCaptureAlert] = useState(false);
   const [newPokemon, setNewPokemon] = useState<CapturedPokemon | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [cameraPermission, setCameraPermission] = useState<'unknown' | 'granted' | 'denied' | 'prompt'>('unknown');
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -129,25 +133,87 @@ const Tab4: React.FC = () => {
     }
   ];
 
+  // Verificar permisos de cámara al cargar el componente
+  useEffect(() => {
+    const checkCameraPermission = async () => {
+      try {
+        // Usar el plugin de Capacitor para verificar permisos
+        const permission = await Camera.checkPermissions();
+        
+        if (permission.camera === 'granted') {
+          setCameraPermission('granted');
+        } else if (permission.camera === 'denied') {
+          setCameraPermission('denied');
+        } else {
+          setCameraPermission('prompt');
+        }
+      } catch (error) {
+        console.log('No se pudo verificar permisos de cámara:', error);
+        setCameraPermission('unknown');
+      }
+    };
+
+    checkCameraPermission();
+  }, []);
+
   const startCamera = async () => {
     try {
       setIsLoading(true);
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
-      });
+      setCameraError(null);
       
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-        setIsScanning(true);
+      // Solicitar permisos usando el plugin de Capacitor
+      const permission = await Camera.requestPermissions();
+      
+      if (permission.camera === 'denied') {
+        throw new Error('Permisos de cámara denegados. Por favor, habilita los permisos en la configuración de la aplicación.');
       }
-    } catch (error) {
+      
+      if (permission.camera === 'granted') {
+        setCameraPermission('granted');
+        
+        // Para Android, usar el plugin de Cámara de Capacitor
+        // Para web, usar getUserMedia como fallback
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+          // En Android, el plugin de Cámara maneja la captura
+          setIsScanning(true);
+        } else {
+          // En web, usar getUserMedia
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            throw new Error('Tu navegador no soporta acceso a la cámara');
+          }
+
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: 'environment',
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            }
+          });
+          
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            streamRef.current = stream;
+            setIsScanning(true);
+          }
+        }
+      }
+    } catch (error: any) {
       console.error('Error accessing camera:', error);
-      alert('No se pudo acceder a la cámara. Asegúrate de dar permisos.');
+      
+      let errorMessage = 'No se pudo acceder a la cámara.';
+      
+      if (error.message.includes('denied')) {
+        errorMessage = 'Permisos de cámara denegados. Por favor, habilita los permisos en la configuración de la aplicación.';
+        setCameraPermission('denied');
+      } else if (error.message.includes('not found')) {
+        errorMessage = 'No se encontró ninguna cámara en tu dispositivo.';
+      } else if (error.message.includes('not supported')) {
+        errorMessage = 'Tu dispositivo no soporta acceso a la cámara.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setCameraError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -166,20 +232,41 @@ const Tab4: React.FC = () => {
     // En una implementación real, aquí controlarías el flash de la cámara
   };
 
-  const capturePhoto = () => {
-    if (videoRef.current && canvasRef.current) {
-      const canvas = canvasRef.current;
-      const video = videoRef.current;
-      const context = canvas.getContext('2d');
-      
-      if (context) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        context.drawImage(video, 0, 0);
+  const capturePhoto = async () => {
+    try {
+      if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+        // En Android, usar el plugin de Cámara de Capacitor
+        const image = await Camera.getPhoto({
+          quality: 90,
+          allowEditing: false,
+          resultType: CameraResultType.DataUrl,
+          source: CameraSource.Camera
+        });
         
-        // Simular detección de QR y captura de Pokémon
-        simulatePokemonCapture();
+        if (image.dataUrl) {
+          // Simular detección de QR y captura de Pokémon
+          simulatePokemonCapture();
+        }
+      } else {
+        // En web, usar el canvas como antes
+        if (videoRef.current && canvasRef.current) {
+          const canvas = canvasRef.current;
+          const video = videoRef.current;
+          const context = canvas.getContext('2d');
+          
+          if (context) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0);
+            
+            // Simular detección de QR y captura de Pokémon
+            simulatePokemonCapture();
+          }
+        }
       }
+    } catch (error) {
+      console.error('Error capturing photo:', error);
+      setCameraError('Error al capturar la foto. Inténtalo de nuevo.');
     }
   };
 
@@ -270,14 +357,58 @@ const Tab4: React.FC = () => {
                 </div>
                 <h3>Activa la cámara para capturar Pokémon</h3>
                 <p>Escanea códigos QR para encontrar Pokémon salvajes</p>
+                
+                {/* Estado de permisos */}
+                {cameraPermission === 'denied' && (
+                  <div className="permission-warning">
+                    <IonIcon icon={close} className="warning-icon" />
+                    <p>Permisos de cámara denegados. Habilita los permisos en la configuración de tu navegador.</p>
+                  </div>
+                )}
+                
+                {cameraPermission === 'granted' && (
+                  <div className="permission-success">
+                    <IonIcon icon={checkmark} className="success-icon" />
+                    <p>Permisos de cámara concedidos. ¡Listo para capturar!</p>
+                  </div>
+                )}
+                
+                {cameraError && (
+                  <div className="camera-error">
+                    <IonIcon icon={close} className="error-icon" />
+                    <p>{cameraError}</p>
+                  </div>
+                )}
+                
                 <IonButton 
                   className="start-camera-btn" 
                   onClick={startCamera}
-                  disabled={isLoading}
+                  disabled={isLoading || cameraPermission === 'denied'}
                 >
                   <IonIcon icon={camera} slot="start" />
-                  Activar Cámara
+                  {isLoading ? 'Activando...' : 'Activar Cámara'}
                 </IonButton>
+                
+                {cameraPermission === 'denied' && (
+                  <div className="permission-help">
+                    <p><strong>¿Cómo habilitar los permisos?</strong></p>
+                    {window.Capacitor && window.Capacitor.isNativePlatform() ? (
+                      <ul>
+                        <li>Ve a Configuración de la aplicación</li>
+                        <li>Busca "Permisos" o "Aplicaciones"</li>
+                        <li>Encuentra "PokeTrainerApp"</li>
+                        <li>Habilita el permiso de "Cámara"</li>
+                        <li>Vuelve a la aplicación</li>
+                      </ul>
+                    ) : (
+                      <ul>
+                        <li>Haz clic en el icono de cámara en la barra de direcciones</li>
+                        <li>Selecciona "Permitir" para el acceso a la cámara</li>
+                        <li>Recarga la página</li>
+                      </ul>
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="camera-view">

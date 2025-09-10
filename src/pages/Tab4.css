@@ -157,6 +157,115 @@
   box-shadow: 0 8px 20px rgba(220, 38, 38, 0.4);
 }
 
+.start-camera-btn:disabled {
+  --background: #9ca3af;
+  --color: #6b7280;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Estados de permisos */
+.permission-warning {
+  background: #fef2f2;
+  border: 2px solid #fecaca;
+  border-radius: 12px;
+  padding: 15px;
+  margin: 15px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.warning-icon {
+  color: #dc2626;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.permission-warning p {
+  color: #dc2626;
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.permission-success {
+  background: #f0fdf4;
+  border: 2px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 15px;
+  margin: 15px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.success-icon {
+  color: #10b981;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.permission-success p {
+  color: #10b981;
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.camera-error {
+  background: #fef2f2;
+  border: 2px solid #fecaca;
+  border-radius: 12px;
+  padding: 15px;
+  margin: 15px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.error-icon {
+  color: #dc2626;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.camera-error p {
+  color: #dc2626;
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.permission-help {
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 15px;
+  margin: 15px 0;
+  text-align: left;
+}
+
+.permission-help p {
+  color: #374151;
+  margin: 0 0 10px 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.permission-help ul {
+  color: #6b7280;
+  margin: 0;
+  padding-left: 20px;
+  font-size: 0.85rem;
+}
+
+.permission-help li {
+  margin-bottom: 5px;
+  line-height: 1.4;
+}
+
 /* Vista de cámara */
 .camera-view {
   position: relative;
