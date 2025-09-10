@@ -1,0 +1,8 @@
+{
+  "name": "PokeTrainerApp",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "react-vite",
+  "id": "fb1f8e83"
+}
