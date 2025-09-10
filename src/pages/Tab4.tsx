@@ -30,7 +30,7 @@ import {
   checkmark,
   close,
   add,
-  pokeball
+  ellipse
 } from 'ionicons/icons';
 import './Tab4.css';
 
@@ -250,7 +250,9 @@ const Tab4: React.FC = () => {
           <IonTitle className="capture-title">
             <div className="capture-header-content">
               <div className="capture-logo">
-                <div className="pokeball-icon"></div>
+                <div className="pokeball-icon">
+                  <IonIcon icon={ellipse} />
+                </div>
               </div>
               <span className="capture-text">POKÉMON CAPTURE</span>
             </div>
