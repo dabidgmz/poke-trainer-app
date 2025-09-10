@@ -13,8 +13,11 @@ import {
   IonInfiniteScrollContent,
   IonSearchbar,
   IonSelect,
-  IonSelectOption
+  IonSelectOption,
+  IonButton,
+  IonIcon
 } from '@ionic/react';
+import { search, filter, refresh } from 'ionicons/icons';
 import './Tab1.css';
 
 const pokemonTypes = [
@@ -71,45 +74,146 @@ const Pokedex: React.FC = () => {
   );
 
   return (
-    <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonTitle>Pokédex</IonTitle>
+    <IonPage className="pokedex-page">
+      <IonHeader className="pokedex-header">
+        <IonToolbar className="pokedex-toolbar">
+          <IonTitle className="pokedex-title">
+            <div className="pokedex-device">
+              <div className="device-body-header">
+                <div className="device-top-section">
+                  <div className="antenna-container">
+                    <div className="antenna"></div>
+                    <div className="antenna-tip"></div>
+                  </div>
+                  <div className="device-brand">
+                    <div className="brand-logo"></div>
+                    <div className="brand-text">POKÉDEX</div>
+                  </div>
+                  <div className="status-panel">
+                    <div className="power-indicator"></div>
+                    <div className="signal-indicator"></div>
+                  </div>
+                </div>
+                <div className="device-screen-small">
+                  <div className="screen-frame-small">
+                    <div className="screen-glass-small">
+                      <div className="screen-content-small">
+                        <div className="scan-line"></div>
+                        <div className="data-grid-small">
+                          <div className="grid-line-small"></div>
+                          <div className="grid-line-small"></div>
+                          <div className="grid-line-small"></div>
+                        </div>
+                        <div className="data-points">
+                          <div className="point"></div>
+                          <div className="point"></div>
+                          <div className="point"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </IonTitle>
         </IonToolbar>
       </IonHeader>
-      <IonContent fullscreen>
-        <div style={{ padding: 16 }}>
-          <IonSearchbar
-            value={search}
-            onIonInput={e => setSearch(e.detail.value!)}
-            placeholder="Buscar Pokémon"
-          />
-          <IonItem>
-            <IonSelect
-              label="Tipo"
-              labelPlacement="stacked"
-              value={type}
-              onIonChange={e => setType(e.detail.value)}
-            >
-              {pokemonTypes.map((t) => (
-                <IonSelectOption key={t.value} value={t.value}>{t.label}</IonSelectOption>
-              ))}
-            </IonSelect>
-          </IonItem>
+      <IonContent fullscreen className="pokedex-content">
+        <div className="pokedex-body">
+          {/* Panel de control superior */}
+          <div className="control-panel">
+            <div className="search-section">
+              <IonSearchbar
+                className="pokedex-search"
+                value={search}
+                onIonInput={e => setSearch(e.detail.value!)}
+                placeholder="Buscar Pokémon..."
+                showClearButton="focus"
+                debounce={300}
+              />
+            </div>
+            <div className="filter-section">
+              <IonSelect
+                className="pokedex-select"
+                value={type}
+                onIonChange={e => setType(e.detail.value)}
+                placeholder="Filtrar por tipo"
+                interface="popover"
+              >
+                {pokemonTypes.map((t) => (
+                  <IonSelectOption key={t.value} value={t.value}>{t.label}</IonSelectOption>
+                ))}
+              </IonSelect>
+            </div>
+          </div>
+
+          {/* Pantalla principal de la Pokédex */}
+          <div className="pokedex-screen-main">
+            <div className="device-body">
+              <div className="main-screen">
+                <div className="screen-frame">
+                  <div className="screen-glass">
+                    <div className="screen-header">
+                      <div className="device-logo">
+                        <div className="logo-circle"></div>
+                        <div className="logo-dots">
+                          <div className="dot"></div>
+                          <div className="dot"></div>
+                          <div className="dot"></div>
+                        </div>
+                      </div>
+                      <div className="status-indicators">
+                        <div className="indicator power"></div>
+                        <div className="indicator signal"></div>
+                        <div className="indicator data"></div>
+                      </div>
+                    </div>
+                    <div className="screen-display">
+                      <div className="display-header">
+                        <div className="scan-bar"></div>
+                        <div className="data-grid">
+                          <div className="grid-line"></div>
+                          <div className="grid-line"></div>
+                          <div className="grid-line"></div>
+                        </div>
+                      </div>
+                      <div className="pokemon-database">
+                        <IonList className="pokedex-list">
+                          {filteredItems.map((item, index) => (
+                            <IonItem key={item.name + index} className="pokedex-item">
+                              <div className="pokemon-entry">
+                                <div className="entry-image">
+                                  <div className="image-frame">
+                                    <img src={item.img} alt={item.name} />
+                                  </div>
+                                  <div className="scan-overlay"></div>
+                                </div>
+                                <div className="entry-data">
+                                  <div className="pokemon-id">#{String(index + 1).padStart(3, '0')}</div>
+                                  <div className="pokemon-name">{item.name}</div>
+                                  <div className="pokemon-classification">
+                                    <span className={`type-badge ${item.type}`}>
+                                      {item.type ? item.type.charAt(0).toUpperCase() + item.type.slice(1) : 'Unknown'}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="entry-status">
+                                  <div className="status-dot active"></div>
+                                </div>
+                              </div>
+                            </IonItem>
+                          ))}
+                        </IonList>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
-        <IonList>
-          {filteredItems.map((item, index) => (
-            <IonItem key={item.name + index}>
-              <IonAvatar slot="start">
-                <img src={item.img} alt={item.name} />
-              </IonAvatar>
-              <IonLabel>
-                <h2>{item.name}</h2>
-                <p>{item.type ? item.type.charAt(0).toUpperCase() + item.type.slice(1) : 'Desconocido'}</p>
-              </IonLabel>
-            </IonItem>
-          ))}
-        </IonList>
+
         <IonInfiniteScroll
           onIonInfinite={event => {
             generateItems();
