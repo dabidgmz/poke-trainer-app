@@ -33,6 +33,7 @@ import {
   ellipse
 } from 'ionicons/icons';
 import { Camera, CameraResultType, CameraSource, PermissionStatus } from '@capacitor/camera';
+import QRScanner from '../components/QRScanner';
 import './Tab4.css';
 
 interface CapturedPokemon {
@@ -52,6 +53,7 @@ interface CapturedPokemon {
 
 const Tab4: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
+  const [showQRScanner, setShowQRScanner] = useState(false);
   const [flashOn, setFlashOn] = useState(false);
   const [capturedPokemon, setCapturedPokemon] = useState<CapturedPokemon[]>([]);
   const [showCaptureAlert, setShowCaptureAlert] = useState(false);
@@ -59,6 +61,7 @@ const Tab4: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [cameraPermission, setCameraPermission] = useState<'unknown' | 'granted' | 'denied' | 'prompt'>('unknown');
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [isRequestingPermissions, setIsRequestingPermissions] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -132,69 +135,155 @@ const Tab4: React.FC = () => {
     }
   ];
 
-  // Verificar permisos de cámara al cargar el componente
+  // Solicitar permisos de cámara automáticamente al cargar el componente
   useEffect(() => {
-    const checkCameraPermission = async () => {
+    const requestCameraPermissions = async () => {
       try {
-        // Usar el plugin de Capacitor para verificar permisos
-        const permission = await Camera.checkPermissions();
+        console.log('Solicitando permisos de cámara automáticamente al cargar la app...');
+        setIsRequestingPermissions(true);
         
-        if (permission.camera === 'granted') {
-          setCameraPermission('granted');
-        } else if (permission.camera === 'denied') {
-          setCameraPermission('denied');
-        } else {
-          setCameraPermission('prompt');
+        // Para web: usar getUserMedia directamente para solicitar permisos
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          try {
+            console.log('Solicitando permisos de cámara en web...');
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            
+            // Si se obtiene el stream, los permisos fueron concedidos
+            setCameraPermission('granted');
+            console.log('Permisos de cámara concedidos en web');
+            
+            // Cerrar el stream inmediatamente ya que solo queríamos los permisos
+            stream.getTracks().forEach(track => track.stop());
+            
+            // Abrir QR Scanner automáticamente
+            setTimeout(() => {
+              setShowQRScanner(true);
+            }, 1000);
+            
+            return;
+          } catch (webError) {
+            console.log('Error solicitando permisos en web:', webError);
+            setCameraPermission('denied');
+          }
         }
+        
+        // Para mobile/Android: usar Capacitor Camera
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+          try {
+            console.log('Solicitando permisos de cámara en Android...');
+            const permission = await Camera.requestPermissions();
+            
+            if (permission.camera === 'granted') {
+              setCameraPermission('granted');
+              console.log('Permisos de cámara concedidos en Android');
+              
+              // Abrir QR Scanner automáticamente
+              setTimeout(() => {
+                setShowQRScanner(true);
+              }, 1000);
+            } else if (permission.camera === 'denied') {
+              setCameraPermission('denied');
+              console.log('Permisos de cámara denegados en Android');
+            } else {
+              setCameraPermission('prompt');
+              console.log('Permisos de cámara pendientes en Android');
+            }
+          } catch (mobileError) {
+            console.log('Error solicitando permisos en Android:', mobileError);
+            setCameraPermission('denied');
+          }
+        }
+        
       } catch (error) {
-        console.log('No se pudo verificar permisos de cámara:', error);
+        console.log('Error general al solicitar permisos de cámara:', error);
         setCameraPermission('unknown');
+      } finally {
+        setIsRequestingPermissions(false);
       }
     };
 
-    checkCameraPermission();
+    // Esperar un poco antes de solicitar permisos para asegurar que el componente esté montado
+    const timer = setTimeout(requestCameraPermissions, 2000);
+    
+    return () => clearTimeout(timer);
   }, []);
+
+  // Función para activar la cámara (asume que los permisos ya están concedidos)
+  const activateCamera = async () => {
+    try {
+      setIsLoading(true);
+      setCameraError(null);
+      
+      // Para Android, usar el plugin de Cámara de Capacitor
+      // Para web, usar getUserMedia como fallback
+      if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+        // En Android, el plugin de Cámara maneja la captura
+        setIsScanning(true);
+      } else {
+        // En web, usar getUserMedia
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('Tu navegador no soporta acceso a la cámara');
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        });
+        
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          streamRef.current = stream;
+          setIsScanning(true);
+        }
+      }
+    } catch (error: any) {
+      console.error('Error activating camera:', error);
+      
+      let errorMessage = 'No se pudo activar la cámara.';
+      
+      if (error.message.includes('not found')) {
+        errorMessage = 'No se encontró ninguna cámara en tu dispositivo.';
+      } else if (error.message.includes('not supported')) {
+        errorMessage = 'Tu dispositivo no soporta acceso a la cámara.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setCameraError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const startCamera = async () => {
     try {
       setIsLoading(true);
       setCameraError(null);
       
-      // Solicitar permisos usando el plugin de Capacitor
-      const permission = await Camera.requestPermissions();
+      // Verificar el estado actual de los permisos
+      const currentPermission = await Camera.checkPermissions();
+      
+      let permission;
+      if (currentPermission.camera === 'granted') {
+        // Los permisos ya están concedidos
+        permission = currentPermission;
+        setCameraPermission('granted');
+      } else {
+        // Solicitar permisos si no están concedidos
+        permission = await Camera.requestPermissions();
+        setCameraPermission(permission.camera as any);
+      }
       
       if (permission.camera === 'denied') {
         throw new Error('Permisos de cámara denegados. Por favor, habilita los permisos en la configuración de la aplicación.');
       }
       
       if (permission.camera === 'granted') {
-        setCameraPermission('granted');
-        
-        // Para Android, usar el plugin de Cámara de Capacitor
-        // Para web, usar getUserMedia como fallback
-        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-          // En Android, el plugin de Cámara maneja la captura
-          setIsScanning(true);
-        } else {
-          // En web, usar getUserMedia
-          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            throw new Error('Tu navegador no soporta acceso a la cámara');
-          }
-
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: 'environment',
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
-            }
-          });
-          
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-            streamRef.current = stream;
-            setIsScanning(true);
-          }
-        }
+        // Usar la función activateCamera para activar la cámara
+        await activateCamera();
       }
     } catch (error: any) {
       console.error('Error accessing camera:', error);
@@ -299,6 +388,30 @@ const Tab4: React.FC = () => {
     setShowCaptureAlert(false);
   };
 
+  const handleQRDetected = (qrCode: string) => {
+    console.log('QR Code detectado:', qrCode);
+    
+    // Buscar el Pokémon correspondiente al código QR
+    const pokemon = availablePokemon.find(p => p.qrCode === qrCode);
+    
+    if (pokemon) {
+      const capturedPokemon: CapturedPokemon = {
+        ...pokemon,
+        captureTime: new Date()
+      };
+      
+      setNewPokemon(capturedPokemon);
+      setShowCaptureAlert(true);
+    } else {
+      // Pokémon no encontrado
+      console.log('Pokémon no encontrado para el código QR:', qrCode);
+    }
+  };
+
+  const handleCloseQRScanner = () => {
+    setShowQRScanner(false);
+  };
+
   const getTypeColor = (type: string) => {
     const colors: { [key: string]: string } = {
       electric: '#f59e0b',
@@ -329,6 +442,16 @@ const Tab4: React.FC = () => {
     };
   }, []);
 
+  // Si se debe mostrar el QR Scanner, renderizarlo
+  if (showQRScanner) {
+    return (
+      <QRScanner 
+        onQRDetected={handleQRDetected}
+        onClose={handleCloseQRScanner}
+      />
+    );
+  }
+
   return (
     <IonPage className="capture-page">
       <IonHeader className="capture-header">
@@ -354,8 +477,21 @@ const Tab4: React.FC = () => {
                 <div className="camera-icon">
                   <IonIcon icon={camera} />
                 </div>
-                <h3>Activa la cámara para capturar Pokémon</h3>
-                <p>Escanea códigos QR para encontrar Pokémon salvajes</p>
+                {isRequestingPermissions ? (
+                  <>
+                    <h3>Solicitando permisos de cámara...</h3>
+                    <p>Por favor, permite el acceso a la cámara cuando se te solicite</p>
+                    <div className="permission-requesting">
+                      <IonIcon icon={camera} className="requesting-icon" />
+                      <p>Esperando respuesta del usuario...</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <h3>Activa la cámara para capturar Pokémon</h3>
+                    <p>Escanea códigos QR para encontrar Pokémon salvajes</p>
+                  </>
+                )}
                 
                 {/* Estado de permisos */}
                 {cameraPermission === 'denied' && (
@@ -365,10 +501,10 @@ const Tab4: React.FC = () => {
                   </div>
                 )}
                 
-                {cameraPermission === 'granted' && (
+                {cameraPermission === 'granted' && !showQRScanner && (
                   <div className="permission-success">
                     <IonIcon icon={checkmark} className="success-icon" />
-                    <p>Permisos de cámara concedidos. ¡Listo para capturar!</p>
+                    <p>Permisos de cámara concedidos. ¡Listo para escanear!</p>
                   </div>
                 )}
                 
@@ -379,14 +515,16 @@ const Tab4: React.FC = () => {
                   </div>
                 )}
                 
-                <IonButton 
-                  className="start-camera-btn" 
-                  onClick={startCamera}
-                  disabled={isLoading || cameraPermission === 'denied'}
-                >
-                  <IonIcon icon={camera} slot="start" />
-                  {isLoading ? 'Activando...' : 'Activar Cámara'}
-                </IonButton>
+                {!showQRScanner && (
+                  <IonButton 
+                    className="start-camera-btn" 
+                    onClick={() => setShowQRScanner(true)}
+                    disabled={isLoading || cameraPermission === 'denied' || isRequestingPermissions}
+                  >
+                    <IonIcon icon={qrCode} slot="start" />
+                    {isLoading ? 'Activando...' : isRequestingPermissions ? 'Solicitando permisos...' : 'Abrir QR Scanner'}
+                  </IonButton>
+                )}
                 
                 {cameraPermission === 'denied' && (
                   <div className="permission-help">
@@ -504,39 +642,41 @@ const Tab4: React.FC = () => {
             </div>
           )}
 
-          {/* Instrucciones */}
-          <div className="instructions-section">
-            <IonCard className="instructions-card">
-              <IonCardHeader>
-                <IonCardTitle>¿Cómo capturar Pokémon?</IonCardTitle>
-              </IonCardHeader>
-              <IonCardContent>
-                <div className="instruction-steps">
-                  <div className="step">
-                    <div className="step-number">1</div>
-                    <div className="step-content">
-                      <h4>Activa la cámara</h4>
-                      <p>Presiona el botón para activar la cámara de tu dispositivo</p>
+          {/* Instrucciones - Solo mostrar cuando el QR Scanner no está activo */}
+          {!showQRScanner && (
+            <div className="instructions-section">
+              <IonCard className="instructions-card">
+                <IonCardHeader>
+                  <IonCardTitle>¿Cómo capturar Pokémon?</IonCardTitle>
+                </IonCardHeader>
+                <IonCardContent>
+                  <div className="instruction-steps">
+                    <div className="step">
+                      <div className="step-number">1</div>
+                      <div className="step-content">
+                        <h4>Abre el QR Scanner</h4>
+                        <p>Presiona el botón para abrir el escáner de códigos QR</p>
+                      </div>
+                    </div>
+                    <div className="step">
+                      <div className="step-number">2</div>
+                      <div className="step-content">
+                        <h4>Escanea códigos QR</h4>
+                        <p>Apunta la cámara hacia códigos QR de Pokémon</p>
+                      </div>
+                    </div>
+                    <div className="step">
+                      <div className="step-number">3</div>
+                      <div className="step-content">
+                        <h4>Captura el Pokémon</h4>
+                        <p>Confirma la captura del Pokémon detectado</p>
+                      </div>
                     </div>
                   </div>
-                  <div className="step">
-                    <div className="step-number">2</div>
-                    <div className="step-content">
-                      <h4>Escanea códigos QR</h4>
-                      <p>Apunta la cámara hacia códigos QR de Pokémon</p>
-                    </div>
-                  </div>
-                  <div className="step">
-                    <div className="step-number">3</div>
-                    <div className="step-content">
-                      <h4>Captura el Pokémon</h4>
-                      <p>Presiona el botón de captura para atrapar al Pokémon</p>
-                    </div>
-                  </div>
-                </div>
-              </IonCardContent>
-            </IonCard>
-          </div>
+                </IonCardContent>
+              </IonCard>
+            </div>
+          )}
         </div>
 
         {/* Alertas */}

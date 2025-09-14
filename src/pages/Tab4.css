@@ -214,6 +214,32 @@
   font-size: 0.9rem;
 }
 
+.permission-requesting {
+  background: #eff6ff;
+  border: 2px solid #93c5fd;
+  border-radius: 12px;
+  padding: 15px;
+  margin: 15px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.requesting-icon {
+  font-size: 1.8rem;
+  color: #3b82f6;
+  flex-shrink: 0;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.permission-requesting p {
+  color: #3b82f6;
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
 .camera-error {
   background: #fef2f2;
   border: 2px solid #fecaca;
