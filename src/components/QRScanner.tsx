@@ -18,9 +18,9 @@ import {
   checkmark,
   camera
 } from 'ionicons/icons';
-import { QRScanner as IonicQRScanner, QRScannerStatus } from '@ionic-native/qr-scanner';
+import jsQR from 'jsqr';
+import QRCode from 'react-qr-code';
 import './QRScanner.css';
-
 interface QRScannerProps {
   onQRDetected: (qrCode: string) => void;
   onClose: () => void;
@@ -48,6 +48,8 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [showPokemonAlert, setShowPokemonAlert] = useState(false);
   const [detectedPokemon, setDetectedPokemon] = useState<CapturedPokemon | null>(null);
+  const [showQRGenerator, setShowQRGenerator] = useState(false);
+  const [generatedQR, setGeneratedQR] = useState<string>('');
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -136,84 +138,28 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
       setIsLoading(true);
       setCameraError(null);
 
-      // Para web: usar getUserMedia
-      if (!window.Capacitor || !window.Capacitor.isNativePlatform()) {
-        try {
-          console.log('Iniciando escáner QR en web...');
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: 'environment',
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
-            }
-          });
-
-          if (videoRef.current && stream) {
-            videoRef.current.srcObject = stream;
-            streamRef.current = stream;
-            setIsScanning(true);
-            startQRAnalysis();
-            console.log('Cámara web iniciada exitosamente');
-            return;
+      // Usar getUserMedia para cámara web
+      try {
+        console.log('Iniciando escáner QR...');
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
           }
-        } catch (webError) {
-          console.log('Error en cámara web:', webError);
-          setCameraError('No se pudo acceder a la cámara en web');
-        }
-      }
+        });
 
-      // Para móvil: usar Ionic Native QRScanner
-      if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-        try {
-          console.log('Iniciando escáner QR nativo...');
-          
-          // Preparar el QRScanner
-          const status: QRScannerStatus = await IonicQRScanner.prepare();
-          
-          if (status.authorized) {
-            console.log('Permisos de cámara concedidos');
-            setIsScanning(true);
-            
-            // Mostrar la vista previa de la cámara
-            await IonicQRScanner.show();
-            
-            // Iniciar el escaneo
-            const scanSubscription = IonicQRScanner.scan().subscribe((text: string) => {
-              console.log('QR detectado:', text);
-              
-              // Buscar el Pokémon correspondiente al código QR
-              const pokemon = availablePokemon.find(p => p.qrCode === text);
-              
-              if (pokemon) {
-                const detectedPokemon: CapturedPokemon = {
-                  ...pokemon,
-                  captureTime: new Date()
-                };
-                
-                setDetectedPokemon(detectedPokemon);
-                setShowPokemonAlert(true);
-                
-                // Detener el escáner
-                IonicQRScanner.hide();
-                scanSubscription.unsubscribe();
-              } else {
-                console.log('Pokémon no encontrado para el código QR:', text);
-              }
-            });
-            
-            console.log('Escáner QR nativo iniciado exitosamente');
-            return;
-          } else if (status.denied) {
-            console.log('Permisos de cámara denegados permanentemente');
-            setCameraError('Permisos de cámara denegados. Ve a configuración para habilitarlos.');
-          } else {
-            console.log('Permisos de cámara no concedidos');
-            setCameraError('Se necesitan permisos de cámara para escanear códigos QR.');
-          }
-        } catch (nativeError) {
-          console.log('Error en escáner QR nativo:', nativeError);
-          setCameraError('Error al inicializar el escáner QR nativo');
+        if (videoRef.current && stream) {
+          videoRef.current.srcObject = stream;
+          streamRef.current = stream;
+          setIsScanning(true);
+          startQRAnalysis();
+          console.log('Cámara iniciada exitosamente');
+          return;
         }
+      } catch (webError) {
+        console.log('Error en cámara:', webError);
+        setCameraError('No se pudo acceder a la cámara. Asegúrate de que los permisos estén habilitados.');
       }
 
     } catch (error: any) {
@@ -231,28 +177,61 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
       streamRef.current = null;
     }
     
-    // Detener QRScanner nativo
-    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-      IonicQRScanner.hide().catch(console.error);
-      IonicQRScanner.destroy().catch(console.error);
-    }
-    
     setIsScanning(false);
   };
 
   const startQRAnalysis = () => {
-    // Simular análisis de QR cada 2 segundos
+    // Análisis real de QR cada 100ms
     const interval = setInterval(() => {
       if (!isScanning) {
         clearInterval(interval);
         return;
       }
       
-      // Simular detección de QR ocasionalmente
-      if (Math.random() < 0.3) { // 30% de probabilidad cada 2 segundos
-        simulateQRDetection();
+      // Solo analizar si hay stream de video
+      if (videoRef.current && canvasRef.current && streamRef.current) {
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        const context = canvas.getContext('2d');
+        
+        if (context && video.readyState === video.HAVE_ENOUGH_DATA) {
+          // Configurar canvas con las dimensiones del video
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          
+          // Dibujar el frame actual del video en el canvas
+          context.drawImage(video, 0, 0, canvas.width, canvas.height);
+          
+          // Obtener los datos de imagen
+          const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+          
+          // Intentar detectar un código QR
+          const code = jsQR(imageData.data, imageData.width, imageData.height);
+          
+          if (code) {
+            console.log('QR detectado:', code.data);
+            
+            // Buscar el Pokémon correspondiente al código QR
+            const pokemon = availablePokemon.find(p => p.qrCode === code.data);
+            
+            if (pokemon) {
+              const detectedPokemon: CapturedPokemon = {
+                ...pokemon,
+                captureTime: new Date()
+              };
+              
+              setDetectedPokemon(detectedPokemon);
+              setShowPokemonAlert(true);
+              
+              // Detener el análisis
+              clearInterval(interval);
+            } else {
+              console.log('Pokémon no encontrado para el código QR:', code.data);
+            }
+          }
+        }
       }
-    }, 2000);
+    }, 100); // Analizar cada 100ms para mejor rendimiento
   };
 
   const simulateQRDetection = () => {
@@ -270,51 +249,11 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
 
   const handleCapture = async () => {
     try {
-      console.log('Iniciando captura...');
-      
-      if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-        // En Android, usar el plugin de Cámara de Capacitor
-        console.log('Usando Capacitor Camera para captura...');
-        
-        try {
-          // Para móvil, usar el QRScanner nativo directamente
-          console.log('Captura manual no disponible en modo nativo');
-          simulateQRDetection();
-        } catch (cameraError) {
-          console.log('Error con captura nativa, simulando:', cameraError);
-          simulateQRDetection();
-        }
-      } else {
-        // En web, usar canvas si hay video stream
-        if (videoRef.current && canvasRef.current && streamRef.current) {
-          try {
-            console.log('Capturando desde canvas...');
-            const canvas = canvasRef.current;
-            const video = videoRef.current;
-            const context = canvas.getContext('2d');
-            
-            if (context) {
-              canvas.width = video.videoWidth;
-              canvas.height = video.videoHeight;
-              context.drawImage(video, 0, 0);
-              
-              // Aquí podrías procesar la imagen para detectar QR real
-              // Por ahora, simulamos la detección
-              simulateQRDetection();
-            }
-          } catch (canvasError) {
-            console.log('Error con canvas, simulando captura:', canvasError);
-            simulateQRDetection();
-          }
-        } else {
-          // Si no hay stream, simular captura
-          console.log('No hay stream de video, simulando captura...');
-          simulateQRDetection();
-        }
-      }
+      console.log('Captura manual - simulando detección...');
+      // Para captura manual, simular detección
+      simulateQRDetection();
     } catch (error) {
       console.error('Error en handleCapture:', error);
-      // En caso de cualquier error, simular captura
       simulateQRDetection();
     }
   };
@@ -329,6 +268,16 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
   const cancelCapture = () => {
     setDetectedPokemon(null);
     setShowPokemonAlert(false);
+  };
+
+  const generateTestQR = (qrCode: string) => {
+    setGeneratedQR(qrCode);
+    setShowQRGenerator(true);
+  };
+
+  const closeQRGenerator = () => {
+    setShowQRGenerator(false);
+    setGeneratedQR('');
   };
 
   return (
@@ -500,6 +449,22 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
             <p>1. Apunta la cámara hacia un código QR de Pokémon</p>
             <p>2. El escáner detectará automáticamente el código</p>
             <p>3. Confirma la captura del Pokémon detectado</p>
+            
+            <div className="test-qr-section">
+              <h5>Generar códigos QR de prueba:</h5>
+              <div className="qr-buttons">
+                {availablePokemon.slice(0, 3).map((pokemon) => (
+                  <IonButton
+                    key={pokemon.id}
+                    size="small"
+                    fill="outline"
+                    onClick={() => generateTestQR(pokemon.qrCode || '')}
+                  >
+                    {pokemon.name}
+                  </IonButton>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -526,6 +491,31 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
           isOpen={isLoading}
           message="Iniciando escáner..."
         />
+
+        {/* Modal para mostrar QR generado */}
+        <IonAlert
+          isOpen={showQRGenerator}
+          onDidDismiss={() => setShowQRGenerator(false)}
+          header="Código QR de Prueba"
+          message=""
+          buttons={[
+            {
+              text: 'Cerrar',
+              role: 'cancel',
+              handler: closeQRGenerator
+            }
+          ]}
+        >
+          <div slot="message">
+            <div className="qr-generator-modal">
+              <div className="qr-code-container">
+                <QRCode value={generatedQR} size={200} />
+              </div>
+              <p className="qr-code-text">{generatedQR}</p>
+              <p className="qr-instruction">Usa este código QR para probar el escáner</p>
+            </div>
+          </div>
+        </IonAlert>
       </IonContent>
     </IonPage>
   );
