@@ -12,6 +12,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@awesome-cordova-plugins/core": "^8.1.0",
     "@capacitor/android": "^7.4.3",
     "@capacitor/app": "7.1.0",
     "@capacitor/camera": "^7.0.2",
@@ -19,10 +20,12 @@
     "@capacitor/haptics": "7.0.2",
     "@capacitor/keyboard": "7.0.3",
     "@capacitor/status-bar": "7.0.3",
+    "@ionic-native/qr-scanner": "^5.36.0",
     "@ionic/react": "^8.5.0",
     "@ionic/react-router": "^8.5.0",
     "@types/react-router": "^5.1.20",
     "@types/react-router-dom": "^5.3.3",
+    "cordova-plugin-qrscanner": "^3.0.1",
     "ionicons": "^7.4.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",

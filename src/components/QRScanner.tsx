@@ -18,7 +18,7 @@ import {
   checkmark,
   camera
 } from 'ionicons/icons';
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { QRScanner as IonicQRScanner, QRScannerStatus } from '@ionic-native/qr-scanner';
 import './QRScanner.css';
 
 interface QRScannerProps {
@@ -136,43 +136,10 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
       setIsLoading(true);
       setCameraError(null);
 
-      // Intentar múltiples métodos para acceder a la cámara
-      let cameraAccessSuccess = false;
-
-      // Verificar HTTPS primero - lógica más robusta
-      const hostname = window.location.hostname.toLowerCase();
-      const protocol = window.location.protocol.toLowerCase();
-      
-      const isLocalhost = hostname === 'localhost' || 
-                         hostname === '127.0.0.1' || 
-                         hostname.includes('localhost') ||
-                         hostname.includes('127.0.0.1') ||
-                         hostname.startsWith('192.168.') ||
-                         hostname.startsWith('10.') ||
-                         hostname.endsWith('.local');
-                         
-      const isHTTPS = protocol === 'https:' || isLocalhost;
-      
-      console.log('Debug de detección:');
-      console.log('- Protocol:', window.location.protocol);
-      console.log('- Hostname:', window.location.hostname);
-      console.log('- Is localhost:', isLocalhost);
-      console.log('- Is HTTPS:', isHTTPS);
-      
-      if (!isHTTPS) {
-        console.log('No está en HTTPS, activando modo simulación automáticamente');
-        setIsScanning(true);
-        startQRAnalysis();
-        cameraAccessSuccess = true;
-        return;
-      }
-      
-      console.log('HTTPS/localhost detectado, intentando acceder a la cámara...');
-
-      // Método 1: getUserMedia con configuración estándar
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      // Para web: usar getUserMedia
+      if (!window.Capacitor || !window.Capacitor.isNativePlatform()) {
         try {
-          console.log('Intentando getUserMedia con configuración estándar...');
+          console.log('Iniciando escáner QR en web...');
           const stream = await navigator.mediaDevices.getUserMedia({
             video: {
               facingMode: 'environment',
@@ -186,105 +153,67 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
             streamRef.current = stream;
             setIsScanning(true);
             startQRAnalysis();
-            cameraAccessSuccess = true;
-            console.log('getUserMedia exitoso con configuración estándar');
+            console.log('Cámara web iniciada exitosamente');
             return;
           }
-        } catch (getUserMediaError) {
-          console.log('getUserMedia estándar falló:', getUserMediaError);
+        } catch (webError) {
+          console.log('Error en cámara web:', webError);
+          setCameraError('No se pudo acceder a la cámara en web');
         }
       }
 
-      // Método 2: getUserMedia con configuración básica
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia && !cameraAccessSuccess) {
+      // Para móvil: usar Ionic Native QRScanner
+      if (window.Capacitor && window.Capacitor.isNativePlatform()) {
         try {
-          console.log('Intentando getUserMedia con configuración básica...');
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: true
-          });
-
-          if (videoRef.current && stream) {
-            videoRef.current.srcObject = stream;
-            streamRef.current = stream;
-            setIsScanning(true);
-            startQRAnalysis();
-            cameraAccessSuccess = true;
-            console.log('getUserMedia exitoso con configuración básica');
-            return;
-          }
-        } catch (getUserMediaError) {
-          console.log('getUserMedia básico falló:', getUserMediaError);
-        }
-      }
-
-      // Método 3: getUserMedia legacy (para navegadores antiguos)
-      if (navigator.getUserMedia && !cameraAccessSuccess) {
-        try {
-          console.log('Intentando getUserMedia legacy...');
-          const stream = await new Promise<MediaStream>((resolve, reject) => {
-            navigator.getUserMedia({ video: true }, resolve, reject);
-          });
-
-          if (videoRef.current && stream) {
-            videoRef.current.srcObject = stream;
-            streamRef.current = stream;
-            setIsScanning(true);
-            startQRAnalysis();
-            cameraAccessSuccess = true;
-            console.log('getUserMedia legacy exitoso');
-            return;
-          }
-        } catch (legacyError) {
-          console.log('getUserMedia legacy falló:', legacyError);
-        }
-      }
-
-      // Método 4: Capacitor Camera (para Android/iOS)
-      if (!cameraAccessSuccess) {
-        try {
-          console.log('Intentando Capacitor Camera...');
+          console.log('Iniciando escáner QR nativo...');
           
-          // Verificar si estamos en una plataforma nativa
-          if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+          // Preparar el QRScanner
+          const status: QRScannerStatus = await IonicQRScanner.prepare();
+          
+          if (status.authorized) {
+            console.log('Permisos de cámara concedidos');
             setIsScanning(true);
-            startQRAnalysis();
-            cameraAccessSuccess = true;
-            console.log('Capacitor Camera activado');
+            
+            // Mostrar la vista previa de la cámara
+            await IonicQRScanner.show();
+            
+            // Iniciar el escaneo
+            const scanSubscription = IonicQRScanner.scan().subscribe((text: string) => {
+              console.log('QR detectado:', text);
+              
+              // Buscar el Pokémon correspondiente al código QR
+              const pokemon = availablePokemon.find(p => p.qrCode === text);
+              
+              if (pokemon) {
+                const detectedPokemon: CapturedPokemon = {
+                  ...pokemon,
+                  captureTime: new Date()
+                };
+                
+                setDetectedPokemon(detectedPokemon);
+                setShowPokemonAlert(true);
+                
+                // Detener el escáner
+                IonicQRScanner.hide();
+                scanSubscription.unsubscribe();
+              } else {
+                console.log('Pokémon no encontrado para el código QR:', text);
+              }
+            });
+            
+            console.log('Escáner QR nativo iniciado exitosamente');
             return;
+          } else if (status.denied) {
+            console.log('Permisos de cámara denegados permanentemente');
+            setCameraError('Permisos de cámara denegados. Ve a configuración para habilitarlos.');
+          } else {
+            console.log('Permisos de cámara no concedidos');
+            setCameraError('Se necesitan permisos de cámara para escanear códigos QR.');
           }
-        } catch (capacitorError) {
-          console.log('Capacitor Camera falló:', capacitorError);
+        } catch (nativeError) {
+          console.log('Error en escáner QR nativo:', nativeError);
+          setCameraError('Error al inicializar el escáner QR nativo');
         }
-      }
-
-      // Si todos los métodos fallan, mostrar error específico
-      if (!cameraAccessSuccess) {
-        let errorMessage = 'No se pudo acceder a la cámara. ';
-        
-        const hostname = window.location.hostname.toLowerCase();
-        const protocol = window.location.protocol.toLowerCase();
-        
-        const isLocalhost = hostname === 'localhost' || 
-                           hostname === '127.0.0.1' || 
-                           hostname.includes('localhost') ||
-                           hostname.includes('127.0.0.1') ||
-                           hostname.startsWith('192.168.') ||
-                           hostname.startsWith('10.') ||
-                           hostname.endsWith('.local');
-                           
-        const isHTTPS = protocol === 'https:' || isLocalhost;
-        
-        if (!isHTTPS) {
-          errorMessage += 'Para usar la cámara en web, necesitas HTTPS. Usa "Modo Simulación" para probar la funcionalidad.';
-        } else if (!navigator.mediaDevices && !navigator.getUserMedia) {
-          errorMessage += 'Tu navegador no soporta acceso a la cámara.';
-        } else if (window.Capacitor && !window.Capacitor.isNativePlatform()) {
-          errorMessage += 'Asegúrate de que los permisos de cámara estén habilitados en tu navegador.';
-        } else {
-          errorMessage += 'Verifica que la cámara no esté siendo usada por otra aplicación.';
-        }
-        
-        throw new Error(errorMessage);
       }
 
     } catch (error: any) {
@@ -296,10 +225,18 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
   };
 
   const stopScanner = () => {
+    // Detener stream de web
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
+    
+    // Detener QRScanner nativo
+    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+      IonicQRScanner.hide().catch(console.error);
+      IonicQRScanner.destroy().catch(console.error);
+    }
+    
     setIsScanning(false);
   };
 
@@ -340,21 +277,11 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
         console.log('Usando Capacitor Camera para captura...');
         
         try {
-          const image = await Camera.getPhoto({
-            quality: 90,
-            allowEditing: false,
-            resultType: CameraResultType.DataUrl,
-            source: CameraSource.Camera
-          });
-
-          if (image.dataUrl) {
-            console.log('Imagen capturada exitosamente');
-            // Simular detección de QR
-            simulateQRDetection();
-          }
+          // Para móvil, usar el QRScanner nativo directamente
+          console.log('Captura manual no disponible en modo nativo');
+          simulateQRDetection();
         } catch (cameraError) {
-          console.log('Error con Capacitor Camera, simulando captura:', cameraError);
-          // Si falla la captura real, simular
+          console.log('Error con captura nativa, simulando:', cameraError);
           simulateQRDetection();
         }
       } else {
@@ -467,7 +394,7 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
                   <div className="debug-info">
                     <p><strong>Información de debug:</strong></p>
                     <p>• getUserMedia: {navigator.mediaDevices ? 'Disponible' : 'No disponible'}</p>
-                    <p>• getUserMedia Legacy: {navigator.getUserMedia ? 'Disponible' : 'No disponible'}</p>
+                    <p>• getUserMedia Legacy: {(navigator as any).getUserMedia ? 'Disponible' : 'No disponible'}</p>
                     <p>• Capacitor: {window.Capacitor ? 'Disponible' : 'No disponible'}</p>
                     <p>• Plataforma nativa: {window.Capacitor?.isNativePlatform() ? 'Sí' : 'No'}</p>
                     <p>• Protocolo: {window.location.protocol}</p>
