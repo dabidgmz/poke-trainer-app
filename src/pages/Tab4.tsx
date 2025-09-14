@@ -33,7 +33,6 @@ import {
   ellipse
 } from 'ionicons/icons';
 import { Camera, CameraResultType, CameraSource, PermissionStatus } from '@capacitor/camera';
-import '../types/capacitor';
 import './Tab4.css';
 
 interface CapturedPokemon {
