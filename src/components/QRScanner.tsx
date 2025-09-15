@@ -6,6 +6,7 @@ import {
 import { close } from 'ionicons/icons';
 import { Capacitor } from '@capacitor/core';
 import { BrowserMultiFormatReader, IScannerControls } from '@zxing/browser';
+import Pokedex from './Pokedex';
 import './QRScanner.css';
 
 declare global {
@@ -19,13 +20,45 @@ interface QRScannerProps {
   onClose: () => void;
 }
 
+interface PokemonData {
+  id: number;
+  name: string;
+  rarity: string;
+  timestamp: string;
+}
+
 const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
   const [isScanning, setIsScanning] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [qrContent, setQrContent] = useState<string | null>(null);
+  const [pokemonData, setPokemonData] = useState<PokemonData | null>(null);
+  const [showResult, setShowResult] = useState(false);
+  const [showPokedex, setShowPokedex] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const webControls = useRef<IScannerControls | null>(null);
 
   const log = (...args: any[]) => console.log('[QR]', ...args);
+
+  const handleQRDetected = (content: string) => {
+    setQrContent(content);
+    
+    // Intentar parsear como JSON de Pokémon
+    try {
+      const pokemon = JSON.parse(content);
+      if (pokemon.id && pokemon.name && pokemon.rarity) {
+        setPokemonData(pokemon);
+        setShowPokedex(true);
+      } else {
+        setPokemonData(null);
+        setShowResult(true);
+      }
+    } catch {
+      setPokemonData(null);
+      setShowResult(true);
+    }
+    
+    cleanup();
+  };
 
   const stopNative = useCallback(async () => {
     try {
@@ -82,9 +115,9 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
             log('scan() nativo', { scanErr, text });
             if (scanErr) {
               setErrorMsg(scanErr?.message ?? 'Error al escanear (nativo)');
-            } else if (text) {
-              onQRDetected(text);
-            }
+             } else if (text) {
+               handleQRDetected(text);
+             }
             cleanup();
           });
         });
@@ -130,7 +163,7 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
          (result: any, err, controls) => {
           if (result?.getText()) {
             log('web result', result.getText());
-            onQRDetected(result.getText());
+            handleQRDetected(result.getText());
             controls.stop();
             cleanup();
           }
@@ -150,6 +183,56 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
     if (isNative) startNative();
     else startWeb();
   }, [startNative, startWeb]);
+
+  const confirmResult = () => {
+    if (qrContent) {
+      onQRDetected(qrContent);
+      onClose();
+    }
+  };
+
+  const cancelResult = () => {
+    setShowResult(false);
+    setQrContent(null);
+    setPokemonData(null);
+    startScan();
+  };
+
+  const handleCapturePokemon = () => {
+    if (!pokemonData) return;
+    
+    // Calcular probabilidad de captura basada en rareza
+    const captureChances = {
+      'common': 95,
+      'uncommon': 80,
+      'rare': 60,
+      'epic': 30,
+      'legendary': 10
+    };
+    
+    const chance = captureChances[pokemonData.rarity.toLowerCase() as keyof typeof captureChances] || 50;
+    const success = Math.random() * 100 < chance;
+    
+    if (success) {
+      // ¡Captura exitosa!
+      onQRDetected(JSON.stringify(pokemonData));
+      onClose();
+    } else {
+      // Captura fallida - mostrar mensaje y permitir reintentar
+      setErrorMsg(`¡${pokemonData.name} escapó! ¡Inténtalo de nuevo!`);
+      setShowPokedex(false);
+      setPokemonData(null);
+      setQrContent(null);
+      startScan();
+    }
+  };
+
+  const handleCancelPokemon = () => {
+    setShowPokedex(false);
+    setPokemonData(null);
+    setQrContent(null);
+    startScan();
+  };
 
   const stopScan = useCallback(() => {
     cleanup();
@@ -203,6 +286,33 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
           message={errorMsg ?? ''}
           buttons={['OK']}
         />
+
+        <IonAlert
+          isOpen={showResult}
+          onDidDismiss={() => setShowResult(false)}
+          header="¡Código QR Detectado!"
+          message={`Contenido: ${qrContent}`}
+          buttons={[
+            {
+              text: 'Cancelar',
+              role: 'cancel',
+              handler: cancelResult
+            },
+            {
+              text: 'Aceptar',
+              handler: confirmResult
+            }
+          ]}
+        />
+
+        {/* Pokédex para Pokémon */}
+        {showPokedex && pokemonData && (
+          <Pokedex
+            pokemon={pokemonData}
+            onCapture={handleCapturePokemon}
+            onCancel={handleCancelPokemon}
+          />
+        )}
       </IonContent>
     </IonPage>
   );

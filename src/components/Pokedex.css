@@ -1,0 +1,549 @@
+/* Estilos para la Pokédex */
+.pokedex-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(20, 20, 20, 0.98));
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  padding: clamp(8px, 2vw, 20px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pokedex-card {
+  max-width: min(420px, 95vw);
+  width: 100%;
+  max-height: min(600px, 90vh);
+  background: linear-gradient(145deg, #1a1a1a, #2a2a2a);
+  border-radius: clamp(12px, 3vw, 20px);
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.6),
+    0 0 20px rgba(76, 175, 80, 0.4);
+  border: 2px solid rgba(76, 175, 80, 0.6);
+  overflow: hidden;
+  margin: auto;
+  text-align: center;
+}
+
+/* Centrar todo el contenido de la tarjeta */
+.pokedex-card ion-card-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: clamp(16px, 4vw, 24px);
+}
+
+/* Removed pokemon name styles */
+
+.pokemon-image-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: clamp(20px, 5vw, 30px) auto;
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.15), rgba(139, 195, 74, 0.15));
+  border-radius: clamp(8px, 2vw, 12px);
+  width: clamp(160px, 30vw, 200px);
+  height: clamp(160px, 30vw, 200px);
+  border: 2px solid rgba(76, 175, 80, 0.5);
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.2);
+  text-align: center;
+  position: relative;
+}
+
+.pokemon-image {
+  width: clamp(120px, 22vw, 160px);
+  height: clamp(120px, 22vw, 160px);
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+  transition: transform 0.3s ease;
+  display: block;
+  margin: 0 auto;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.pokemon-image:hover {
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+.pokemon-info {
+  margin: clamp(16px, 4vw, 24px) 0;
+  padding: 0 clamp(12px, 3vw, 20px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(8px, 2vw, 12px);
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 300px;
+  margin: 0;
+  padding: clamp(8px, 2vw, 12px) clamp(12px, 3vw, 18px);
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: clamp(8px, 2vw, 12px);
+  border-left: 4px solid #4CAF50;
+  min-height: clamp(40px, 8vw, 50px);
+  gap: 12px;
+}
+
+.label {
+  font-weight: bold;
+  color: #4CAF50;
+  font-size: clamp(13px, 3vw, 16px);
+  flex-shrink: 0;
+  min-width: fit-content;
+}
+
+.value {
+  color: #ffffff;
+  font-size: clamp(12px, 2.8vw, 15px);
+  text-align: right;
+  flex-shrink: 1;
+  word-break: break-word;
+}
+
+.capture-chance {
+  font-weight: bold;
+  font-size: clamp(12px, 2.5vw, 14px);
+  padding: clamp(3px, 0.8vw, 5px) clamp(6px, 1.5vw, 10px);
+  border-radius: clamp(12px, 3vw, 18px);
+  white-space: nowrap;
+  text-align: center;
+  min-width: fit-content;
+}
+
+.capture-chance.high {
+  background: rgba(76, 175, 80, 0.3);
+  color: #4CAF50;
+  border: 2px solid #4CAF50;
+}
+
+.capture-chance.medium {
+  background: rgba(255, 193, 7, 0.3);
+  color: #FFC107;
+  border: 2px solid #FFC107;
+}
+
+.capture-chance.low {
+  background: rgba(244, 67, 54, 0.3);
+  color: #F44336;
+  border: 2px solid #F44336;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: clamp(12px, 3vw, 16px);
+  margin: clamp(20px, 5vw, 28px) auto clamp(16px, 4vw, 24px) auto;
+  padding: 0 clamp(12px, 3vw, 20px);
+  width: 100%;
+  max-width: 350px;
+  text-align: center;
+}
+
+.cancel-btn {
+  flex: 1;
+  --border-radius: 6px !important;
+  --border-width: 2px;
+  --border-color: #666;
+  --color: #666;
+  --height: clamp(48px, 12vw, 60px);
+  font-size: clamp(14px, 3.2vw, 18px);
+  font-weight: 600;
+  min-width: 120px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.capture-btn {
+  flex: 1.5;
+  --border-radius: 6px !important;
+  font-weight: bold;
+  font-size: clamp(15px, 3.5vw, 18px);
+  --height: clamp(48px, 12vw, 60px);
+  --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  min-width: 150px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Asegurar que los botones de Ionic se centren y sean rectangulares */
+.cancel-btn ion-button,
+.capture-btn ion-button {
+  width: 100%;
+  text-align: center;
+  --border-radius: 6px !important;
+}
+
+.cancel-btn .button-native,
+.capture-btn .button-native {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  text-align: center;
+  border-radius: 6px !important;
+}
+
+/* Forzar botones rectangulares para Ionic */
+.cancel-btn ion-button.button,
+.capture-btn ion-button.button {
+  --border-radius: 6px !important;
+}
+
+.cancel-btn ion-button.button .button-native,
+.capture-btn ion-button.button .button-native {
+  border-radius: 6px !important;
+}
+
+/* Estilos adicionales para botones de Ionic */
+.cancel-btn,
+.capture-btn {
+  border-radius: 6px !important;
+}
+
+.cancel-btn *,
+.capture-btn * {
+  border-radius: 6px !important;
+}
+
+.capture-btn:hover {
+  --box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  transform: translateY(-2px);
+}
+
+/* Animaciones */
+@keyframes pokemonAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) rotate(-10deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.pokedex-card {
+  animation: pokemonAppear 0.5s ease-out;
+}
+
+@keyframes capturePulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.capture-btn:active {
+  animation: capturePulse 0.2s ease-in-out;
+}
+
+/* Mejoras de accesibilidad y UX */
+.pokedex-container {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.pokedex-card {
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Mejoras para dispositivos táctiles */
+.capture-btn, .cancel-btn {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Scroll suave en iOS */
+.pokedex-container {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Prevenir zoom en inputs en iOS */
+.pokedex-container {
+  touch-action: pan-x pan-y;
+}
+
+/* Mejorar la legibilidad en pantallas pequeñas */
+@media (max-width: 480px) {
+  .pokedex-container {
+    font-size: 14px;
+  }
+}
+
+/* Optimización para pantallas de alta densidad */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .pokemon-image {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+}
+
+/* Responsive - Mobile First Approach */
+
+/* Extra small devices (phones, 320px and up) */
+@media (max-width: 480px) {
+  .pokedex-container {
+    padding: 8px;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .pokedex-card {
+    max-height: 95vh;
+    border-radius: 16px;
+    max-width: 98vw;
+  }
+  
+  .pokemon-image-container {
+    width: clamp(140px, 35vw, 180px);
+    height: clamp(140px, 35vw, 180px);
+    margin: clamp(16px, 4vw, 24px) auto;
+  }
+  
+  .pokemon-image {
+    width: clamp(100px, 25vw, 140px);
+    height: clamp(100px, 25vw, 140px);
+    display: block;
+    margin: 0 auto;
+  }
+  
+  .pokemon-info {
+    padding: 0 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+  
+  .info-row {
+    max-width: 280px;
+    min-height: 44px;
+    margin: 0 auto clamp(8px, 2vw, 12px) auto;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    gap: 12px;
+    max-width: 280px;
+    margin: clamp(16px, 4vw, 20px) auto;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .capture-btn, .cancel-btn {
+    flex: 1;
+    --height: 52px;
+    font-size: 16px;
+    width: 100%;
+    min-width: auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .capture-btn {
+    order: 1;
+  }
+  
+  .cancel-btn {
+    order: 2;
+  }
+}
+
+/* Very small devices (320px and down) */
+@media (max-width: 360px) {
+  .pokemon-image-container {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .pokemon-image {
+    width: 90px;
+    height: 90px;
+  }
+  
+  .pokemon-info {
+    padding: 0 4px;
+  }
+  
+  .info-row {
+    max-width: 260px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    min-height: auto;
+    padding: 8px 10px;
+  }
+  
+  .value {
+    text-align: left;
+  }
+  
+  .capture-chance {
+    align-self: flex-start;
+  }
+  
+  .action-buttons {
+    max-width: 260px;
+    gap: 8px;
+  }
+  
+  .capture-btn, .cancel-btn {
+    --height: 48px;
+    font-size: 15px;
+  }
+}
+
+/* Tablet portrait (768px and up) */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .pokedex-card {
+    max-width: 520px;
+    max-height: 85vh;
+  }
+  
+  .pokemon-image-container {
+    width: 180px;
+    height: 180px;
+  }
+  
+  .pokemon-image {
+    width: 140px;
+    height: 140px;
+  }
+  
+  .info-row {
+    max-width: 320px;
+  }
+  
+  .action-buttons {
+    max-width: 380px;
+    gap: 16px;
+  }
+  
+  .capture-btn, .cancel-btn {
+    --height: 56px;
+    font-size: 18px;
+  }
+}
+
+/* Desktop and large screens (1024px and up) */
+@media (min-width: 1024px) {
+  .pokedex-container {
+    padding: 20px;
+  }
+  
+  .pokedex-card {
+    max-width: 500px;
+    max-height: 85vh;
+  }
+  
+  .pokemon-image-container {
+    width: 200px;
+    height: 200px;
+  }
+  
+  .pokemon-image {
+    width: 160px;
+    height: 160px;
+  }
+  
+  
+  .info-row {
+    max-width: 350px;
+    padding: 12px 20px;
+    min-height: 52px;
+  }
+  
+  .label {
+    font-size: 16px;
+  }
+  
+  .value {
+    font-size: 15px;
+  }
+  
+  .capture-chance {
+    font-size: 16px;
+    padding: 6px 12px;
+  }
+  
+  .action-buttons {
+    max-width: 400px;
+    gap: 20px;
+    margin-top: 32px;
+  }
+  
+  .capture-btn, .cancel-btn {
+    --height: 60px;
+    font-size: 18px;
+  }
+}
+
+/* Landscape orientation adjustments */
+@media (orientation: landscape) and (max-height: 600px) {
+  .pokedex-container {
+    align-items: flex-start;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+  
+  .pokedex-card {
+    max-height: 95vh;
+  }
+  
+  .pokemon-image-container {
+    margin: 8px 0;
+    padding: 8px;
+  }
+  
+  .pokemon-image {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .pokemon-info {
+    margin: 8px 0;
+  }
+  
+  .info-row {
+    margin: 4px 0;
+    padding: 4px 8px;
+    min-height: 32px;
+  }
+  
+  .action-buttons {
+    margin-top: 12px;
+    gap: 8px;
+  }
+  
+  .capture-btn, .cancel-btn {
+    --height: 40px;
+    font-size: 14px;
+  }
+}
