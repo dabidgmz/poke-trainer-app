@@ -14,6 +14,7 @@ declare global {
   }
 }
 
+
 interface QRScannerProps {
   onQRDetected: (qrCode: string) => void;
   onClose: () => void;
