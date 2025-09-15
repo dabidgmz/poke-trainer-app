@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  IonContent, IonHeader, IonPage, IonTitle, IonToolbar,
+  IonContent, IonHeader, IonPage, IonToolbar,
   IonButton, IonIcon, IonAlert
 } from '@ionic/react';
-import { close, construct, refresh } from 'ionicons/icons';
+import { close } from 'ionicons/icons';
 import { Capacitor } from '@capacitor/core';
 import { BrowserMultiFormatReader, IScannerControls } from '@zxing/browser';
 import './QRScanner.css';
@@ -13,7 +13,6 @@ declare global {
     QRScanner: any;
   }
 }
-
 
 interface QRScannerProps {
   onQRDetected: (qrCode: string) => void;
@@ -43,12 +42,9 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
     try {
       webControls.current?.stop();
       webControls.current = null;
-      // Detener tracks si quedaron
       const stream = videoRef.current?.srcObject as MediaStream | null;
       stream?.getTracks().forEach(t => t.stop());
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-      }
+      if (videoRef.current) videoRef.current.srcObject = null;
     } catch (e) {
       log('stopWeb err', e);
     }
@@ -60,6 +56,7 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
     setIsScanning(false);
   }, [stopNative, stopWeb]);
 
+  // -------- Nativo (cordova-plugin-qrscanner) ----------
   const startNative = useCallback(() => {
     if (!window.QRScanner) {
       setErrorMsg('QRScanner no está disponible en nativo. ¿Instalaste el plugin y corriste npx cap sync?');
@@ -74,9 +71,13 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
       }
 
       if (status.authorized) {
+        // Fuerza cámara trasera; el flash solo existe ahí
+        window.QRScanner.useBackCamera?.();
+
         window.QRScanner.show(() => {
           document.body.classList.add('qr-active'); // hace el fondo transparente
           setIsScanning(true);
+
           window.QRScanner.scan((scanErr: any, text: string) => {
             log('scan() nativo', { scanErr, text });
             if (scanErr) {
@@ -96,35 +97,44 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
     });
   }, [cleanup, onQRDetected]);
 
+  // -------- Web (ZXing) ----------
   const startWeb = useCallback(async () => {
-    // Necesita HTTPS o localhost
     const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
     if (!isSecure) {
       setErrorMsg('La cámara web requiere HTTPS o localhost.');
       return;
     }
+
     try {
+      // Pide permiso primero para que los device labels no vengan vacíos
+      const tmpStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      tmpStream.getTracks().forEach(t => t.stop());
+
       const codeReader = new BrowserMultiFormatReader();
-      // Puedes filtrar cámara trasera buscando label que contenga "back" si quieres
       const devices = await BrowserMultiFormatReader.listVideoInputDevices();
-      const backCam = devices.find(d => /back|trás|rear/i.test(d.label)) ?? devices[0];
+
+      
+      let backCam = devices.find(d => /back|rear|environment/i.test(d.label));
+      if (!backCam && devices[0]) backCam = devices[0];
+
       if (!backCam) {
         setErrorMsg('No se encontró cámara disponible en el navegador.');
         return;
       }
+
       setIsScanning(true);
 
       webControls.current = await codeReader.decodeFromVideoDevice(
         backCam.deviceId,
         videoRef.current!,
-        (result: any, err, controls) => {
+         (result: any, err, controls) => {
           if (result?.getText()) {
             log('web result', result.getText());
             onQRDetected(result.getText());
-            controls.stop(); // detener de inmediato
+            controls.stop();
             cleanup();
           }
-          // err puede ser NotFoundException en frames sin código: es normal
+          // err NotFoundException por frames sin código es normal
         }
       );
     } catch (e: any) {
@@ -146,12 +156,9 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
   }, [cleanup]);
 
   useEffect(() => {
-    // Iniciar el escáner automáticamente al montar el componente
+    // Auto-inicio al montar
     startScan();
-    
-    return () => {
-      cleanup();
-    };
+    return () => { cleanup(); };
   }, [cleanup, startScan]);
 
   return (
@@ -165,6 +172,7 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
       </IonHeader>
 
       <IonContent className="qr-content">
+        {/* Solo visible en web */}
         <video
           ref={videoRef}
           autoPlay
@@ -173,7 +181,7 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
           style={{ width: '100%', height: 'auto', display: Capacitor.isNativePlatform() ? 'none' : 'block' }}
         />
 
-        {/* Overlay de escaneo QR */}
+        {/* Overlay visual */}
         {isScanning && (
           <div className="qr-overlay">
             <div className="qr-frame">
@@ -185,10 +193,8 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
             <div className="qr-instruction">
               <p>Apunta hacia un código QR</p>
             </div>
-            
           </div>
         )}
-
 
         <IonAlert
           isOpen={!!errorMsg}
