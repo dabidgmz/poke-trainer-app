@@ -145,16 +145,18 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
   }, [cleanup]);
 
   useEffect(() => {
+    // Iniciar el escáner automáticamente al montar el componente
+    startScan();
+    
     return () => {
       cleanup();
     };
-  }, [cleanup]);
+  }, [cleanup, startScan]);
 
   return (
-    <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonTitle>Escanear QR</IonTitle>
+    <IonPage className="qr-scanner-page">
+      <IonHeader className="qr-scanner-header">
+        <IonToolbar className="qr-scanner-toolbar">
           <IonButton slot="end" fill="clear" onClick={() => { stopScan(); onClose(); }}>
             <IonIcon icon={close} />
           </IonButton>
@@ -170,19 +172,22 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
           style={{ width: '100%', height: 'auto', display: Capacitor.isNativePlatform() ? 'none' : 'block' }}
         />
 
-        <div className="qr-actions">
-          {!isScanning ? (
-            <IonButton onClick={startScan}>
-              <IonIcon slot="start" icon={construct} />
-              Iniciar escaneo
-            </IonButton>
-          ) : (
-            <IonButton color="medium" onClick={stopScan}>
-              <IonIcon slot="start" icon={refresh} />
-              Detener
-            </IonButton>
-          )}
-        </div>
+        {/* Overlay de escaneo QR */}
+        {isScanning && (
+          <div className="qr-overlay">
+            <div className="qr-frame">
+              <div className="corner top-left"></div>
+              <div className="corner top-right"></div>
+              <div className="corner bottom-left"></div>
+              <div className="corner bottom-right"></div>
+            </div>
+            <div className="qr-instruction">
+              <p>Apunta hacia un código QR</p>
+            </div>
+            
+          </div>
+        )}
+
 
         <IonAlert
           isOpen={!!errorMsg}

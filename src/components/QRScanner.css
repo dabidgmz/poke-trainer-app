@@ -430,6 +430,140 @@
   font-size: 1.5rem;
 }
 
+/* Overlay de escaneo QR */
+.qr-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(20, 20, 20, 0.9));
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.qr-frame {
+  position: relative;
+  width: 280px;
+  height: 280px;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 15px;
+  background: rgba(0, 0, 0, 0.3);
+  box-shadow: 
+    0 0 20px rgba(255, 255, 255, 0.2),
+    inset 0 0 20px rgba(255, 255, 255, 0.1);
+}
+
+.corner {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border: 4px solid #4CAF50;
+  border-radius: 8px;
+  background: rgba(76, 175, 80, 0.1);
+  animation: cornerGlow 2s ease-in-out infinite alternate;
+}
+
+.corner.top-left {
+  top: -6px;
+  left: -6px;
+  border-right: none;
+  border-bottom: none;
+  border-top-left-radius: 15px;
+}
+
+.corner.top-right {
+  top: -6px;
+  right: -6px;
+  border-left: none;
+  border-bottom: none;
+  border-top-right-radius: 15px;
+}
+
+.corner.bottom-left {
+  bottom: -6px;
+  left: -6px;
+  border-right: none;
+  border-top: none;
+  border-bottom-left-radius: 15px;
+}
+
+.corner.bottom-right {
+  bottom: -6px;
+  right: -6px;
+  border-left: none;
+  border-top: none;
+  border-bottom-right-radius: 15px;
+}
+
+@keyframes cornerGlow {
+  0% { 
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+    transform: scale(1);
+  }
+  100% { 
+    box-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
+    transform: scale(1.02);
+  }
+}
+
+.qr-instruction {
+  margin-top: 40px;
+  text-align: center;
+  color: white;
+  font-size: 18px;
+  font-weight: 300;
+  letter-spacing: 0.5px;
+}
+
+.qr-instruction p {
+  margin: 0;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+  background: linear-gradient(45deg, #ffffff, #e0e0e0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+
+/* Variables CSS para el escáner activo */
+body.qr-active {
+  --background: transparent;
+  --ion-background-color: transparent;
+}
+
+/* Estilos para el escáner QR */
+.qr-scanner-page {
+  --background: transparent;
+}
+
+.qr-scanner-header {
+  --background: transparent;
+  --border-width: 0;
+}
+
+.qr-scanner-toolbar {
+  --background: transparent;
+  --border-width: 0;
+  --color: white;
+}
+
+.qr-scanner-title {
+  --color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.qr-content {
+  --background: transparent;
+}
+
+.qr-content ion-content {
+  --background: transparent;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .qr-frame {
