@@ -56,71 +56,67 @@ const Pokedex: React.FC<PokedexProps> = ({ pokemon, onCapture, onCancel }) => {
   const isLowChance = captureChance < 40;
 
   return (
-    <div className="pokedex-container">
-      <IonCard className="pokedex-card">
-        <IonCardHeader>
-        </IonCardHeader>
+    <div className="pokedex-container-modern">
+      <div className="pokedex-card-modern">
         
-        <IonCardContent>
-          {/* Imagen del Pokémon */}
-          <div className="pokemon-image-container">
+        {/* Imagen del Pokémon */}
+        <div className="pokemon-image-section">
+          <div className="pokemon-image-container-modern">
             <IonImg 
               src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.id}.png`}
               alt={pokemon.name}
-              className="pokemon-image"
+              className="pokemon-image-modern"
               onError={(e) => {
-                // Fallback a imagen genérica si no se encuentra
                 (e.target as HTMLImageElement).src = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png';
               }}
             />
           </div>
+        </div>
 
-          {/* Información del Pokémon */}
-          <div className="pokemon-info">
-            <div className="info-row">
-              <span className="label">ID:</span>
-              <span className="value">#{pokemon.id.toString().padStart(3, '0')}</span>
-            </div>
-            
-            <div className="info-row">
-              <span className="label">Rarity:</span>
-              <IonChip color={getRarityColor(pokemon.rarity)}>
-                <IonIcon icon={getRarityIcon(pokemon.rarity)} />
-                <span>{pokemon.rarity.toUpperCase()}</span>
-              </IonChip>
-            </div>
-
-            <div className="info-row">
-              <span className="label">Capture Chance:</span>
-              <span className={`capture-chance ${isHighChance ? 'high' : isMediumChance ? 'medium' : 'low'}`}>
-                {captureChance}%
-              </span>
-            </div>
-
+        {/* Información del Pokémon */}
+        <div className="pokemon-info-section">
+          <div className="info-card">
+            <span className="info-label">ID:</span>
+            <span className="info-value">#{pokemon.id.toString().padStart(3, '0')}</span>
+          </div>
+          
+          <div className="info-card">
+            <span className="info-label">Rarity:</span>
+            <IonChip color={getRarityColor(pokemon.rarity)} className="rarity-chip">
+              <IonIcon icon={getRarityIcon(pokemon.rarity)} />
+              <span>{pokemon.rarity.toUpperCase()}</span>
+            </IonChip>
           </div>
 
-          {/* Botones de acción */}
-          <div className="action-buttons">
-            <IonButton 
-              fill="outline" 
-              onClick={onCancel}
-              className="cancel-btn"
-            >
-              Cancelar
-            </IonButton>
-            
-            <IonButton 
-              color={isHighChance ? 'success' : isMediumChance ? 'warning' : 'danger'}
-              onClick={onCapture}
-              className="capture-btn"
-            >
-              {isHighChance ? '¡Capturar!' : 
-               isMediumChance ? '¡Intentar!' : 
-               '¡Desafío!'}
-            </IonButton>
+          <div className="info-card">
+            <span className="info-label">Capture Chance:</span>
+            <span className={`capture-chance-modern ${isHighChance ? 'high' : isMediumChance ? 'medium' : 'low'}`}>
+              {captureChance}%
+            </span>
           </div>
-        </IonCardContent>
-      </IonCard>
+        </div>
+
+        {/* Botones de acción */}
+        <div className="action-buttons-modern">
+          <IonButton 
+            fill="outline" 
+            onClick={onCancel}
+            className="cancel-btn-modern"
+          >
+            Cancelar
+          </IonButton>
+          
+          <IonButton 
+            color={isHighChance ? 'success' : isMediumChance ? 'warning' : 'danger'}
+            onClick={onCapture}
+            className={`capture-btn-modern ${isHighChance ? 'high' : isMediumChance ? 'medium' : 'low'}`}
+          >
+            {isHighChance ? '¡Capturar!' : 
+             isMediumChance ? '¡Intentar!' : 
+             '¡Desafío!'}
+          </IonButton>
+        </div>
+      </div>
     </div>
   );
 };
