@@ -5,7 +5,7 @@ import {
 } from '@ionic/react';
 import { close, construct, refresh } from 'ionicons/icons';
 import { Capacitor } from '@capacitor/core';
-import { BrowserMultiFormatReader, IScannerControls, Result } from '@zxing/browser';
+import { BrowserMultiFormatReader, IScannerControls } from '@zxing/browser';
 import './QRScanner.css';
 
 declare global {
@@ -116,7 +116,7 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
       webControls.current = await codeReader.decodeFromVideoDevice(
         backCam.deviceId,
         videoRef.current!,
-        (result: Result | undefined, err, controls) => {
+        (result: any, err, controls) => {
           if (result?.getText()) {
             log('web result', result.getText());
             onQRDetected(result.getText());
