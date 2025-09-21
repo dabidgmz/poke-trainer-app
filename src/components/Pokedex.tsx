@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  IonCard, IonCardContent, IonCardHeader, IonCardTitle,
+  IonCard, IonCardContent, IonCardHeader, IonCardTitle, IonCardSubtitle,
   IonButton, IonImg, IonChip, IonIcon
 } from '@ionic/react';
 import { star, starOutline, trophy, flash } from 'ionicons/icons';
@@ -57,66 +57,44 @@ const Pokedex: React.FC<PokedexProps> = ({ pokemon, onCapture, onCancel }) => {
 
   return (
     <div className="pokedex-container-modern">
-      <div className="pokedex-card-modern">
+      <IonCard className="pokedex-card-modern">
+        <IonImg 
+          src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.id}.png`}
+          alt={pokemon.name}
+          className="pokemon-image-modern"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png';
+          }}
+        />
         
-        {/* Imagen del Pokémon */}
-        <div className="pokemon-image-section">
-          <div className="pokemon-image-container-modern">
-            <IonImg 
-              src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.id}.png`}
-              alt={pokemon.name}
-              className="pokemon-image-modern"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png';
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Información del Pokémon */}
-        <div className="pokemon-info-section">
-          <div className="info-card">
-            <span className="info-label">ID:</span>
-            <span className="info-value">#{pokemon.id.toString().padStart(3, '0')}</span>
-          </div>
-          
-          <div className="info-card">
-            <span className="info-label">Rarity:</span>
+        <IonCardHeader>
+          <IonCardTitle>#{pokemon.id.toString().padStart(3, '0')}</IonCardTitle>
+          <IonCardSubtitle>
             <IonChip color={getRarityColor(pokemon.rarity)} className="rarity-chip">
               <IonIcon icon={getRarityIcon(pokemon.rarity)} />
               <span>{pokemon.rarity.toUpperCase()}</span>
             </IonChip>
-          </div>
+          </IonCardSubtitle>
+        </IonCardHeader>
 
-          <div className="info-card">
-            <span className="info-label">Capture Chance:</span>
-            <span className={`capture-chance-modern ${isHighChance ? 'high' : isMediumChance ? 'medium' : 'low'}`}>
-              {captureChance}%
-            </span>
+        <IonCardContent>
+          <div className="action-buttons-modern">
+            <IonButton fill="clear" onClick={onCancel}>
+              Cancelar
+            </IonButton>
+            
+            <IonButton 
+              fill="clear"
+              color={isHighChance ? 'success' : isMediumChance ? 'warning' : 'danger'}
+              onClick={onCapture}
+            >
+              {isHighChance ? '¡Capturar!' : 
+               isMediumChance ? '¡Intentar!' : 
+               '¡Desafío!'}
+            </IonButton>
           </div>
-        </div>
-
-        {/* Botones de acción */}
-        <div className="action-buttons-modern">
-          <IonButton 
-            fill="outline" 
-            onClick={onCancel}
-            className="cancel-btn-modern"
-          >
-            Cancelar
-          </IonButton>
-          
-          <IonButton 
-            color={isHighChance ? 'success' : isMediumChance ? 'warning' : 'danger'}
-            onClick={onCapture}
-            className={`capture-btn-modern ${isHighChance ? 'high' : isMediumChance ? 'medium' : 'low'}`}
-          >
-            {isHighChance ? '¡Capturar!' : 
-             isMediumChance ? '¡Intentar!' : 
-             '¡Desafío!'}
-          </IonButton>
-        </div>
-      </div>
+        </IonCardContent>
+      </IonCard>
     </div>
   );
 };

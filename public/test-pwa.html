@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test PWA - Pokémon Trainer</title>
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#3b82f6">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .install-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 18px;
+            cursor: pointer;
+            margin: 20px;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+        .install-btn:hover {
+            background: #2563eb;
+        }
+        .status {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Pokémon Trainer App</h1>
+        <p>Test de instalación PWA</p>
+        
+        <div class="status">
+            <h3>Estado de la PWA:</h3>
+            <p id="pwa-status">Verificando...</p>
+        </div>
+        
+        <button class="install-btn" id="install-btn" style="display: none;">
+            📱 Instalar App
+        </button>
+        
+        <div class="status">
+            <h3>Requisitos PWA:</h3>
+            <ul style="text-align: left;">
+                <li>✅ Manifest válido</li>
+                <li>✅ Service Worker</li>
+                <li>✅ HTTPS o localhost</li>
+                <li>✅ Iconos correctos</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        let deferredPrompt;
+        const installBtn = document.getElementById('install-btn');
+        const statusEl = document.getElementById('pwa-status');
+
+        // Detectar estado PWA
+        function checkPWAStatus() {
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+            const isIOSStandalone = window.navigator.standalone === true;
+            
+            if (isStandalone || isIOSStandalone) {
+                statusEl.textContent = '✅ App ya instalada';
+                statusEl.style.color = '#10b981';
+            } else {
+                statusEl.textContent = '⏳ App no instalada - Lista para instalar';
+                statusEl.style.color = '#f59e0b';
+            }
+        }
+
+        // Evento beforeinstallprompt
+        window.addEventListener('beforeinstallprompt', (e) => {
+            console.log('beforeinstallprompt triggered!');
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.style.display = 'block';
+            statusEl.textContent = '🎉 App lista para instalar';
+            statusEl.style.color = '#10b981';
+        });
+
+        // Evento appinstalled
+        window.addEventListener('appinstalled', () => {
+            console.log('App installed successfully!');
+            installBtn.style.display = 'none';
+            statusEl.textContent = '✅ App instalada exitosamente';
+            statusEl.style.color = '#10b981';
+        });
+
+        // Botón de instalación
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`User response to the install prompt: ${outcome}`);
+                deferredPrompt = null;
+                installBtn.style.display = 'none';
+            }
+        });
+
+        // Verificar estado al cargar
+        checkPWAStatus();
+    </script>
+</body>
+</html>

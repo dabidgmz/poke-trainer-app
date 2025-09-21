@@ -20,19 +20,62 @@
   backdrop-filter: blur(20px);
 }
 
+/* Estilos para IonCard */
+.pokedex-card-modern ion-card {
+  margin: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.pokedex-card-modern ion-card-header {
+  padding: 12px 16px 8px 16px;
+  text-align: center;
+}
+
+.pokedex-card-modern ion-card-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 4px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.pokedex-card-modern ion-card-subtitle {
+  margin: 0;
+}
+
+.pokedex-card-modern ion-card-content {
+  padding: 8px 16px 16px 16px;
+}
+
+.capture-info {
+  text-align: center;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #000000;
+  border-radius: 12px;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.capture-info .capture-chance-modern {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
 .pokedex-card-modern {
-  max-width: 450px;
+  max-width: 320px;
   width: 100%;
-  max-height: 90vh;
+  max-height: 80vh;
   background: linear-gradient(145deg, 
     #0f172a, 
     #1e293b, 
     #334155
   );
-  border-radius: 24px;
+  border-radius: 16px;
   box-shadow: 
-    0 32px 64px rgba(0, 0, 0, 0.8),
-    0 0 40px rgba(59, 130, 246, 0.3),
+    0 20px 40px rgba(0, 0, 0, 0.8),
+    0 0 20px rgba(59, 130, 246, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(59, 130, 246, 0.2);
   overflow: hidden;
@@ -129,10 +172,10 @@
 }
 
 .pokemon-image-modern {
-  width: 160px;
-  height: 160px;
+  width: 100px;
+  height: 100px;
   object-fit: contain;
-  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.4));
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   z-index: 2;
 }
@@ -254,9 +297,21 @@
 /* Botones de acción elegantes */
 .action-buttons-modern {
   display: flex;
-  gap: 16px;
-  padding: 24px;
+  gap: 12px;
+  padding: 16px;
   margin-top: auto;
+}
+
+.action-buttons-modern ion-button {
+  margin: 0;
+  --padding-start: 12px;
+  --padding-end: 12px;
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+  font-weight: 600;
+  font-size: 12px;
+  min-height: 36px;
+  border-radius: 6px;
 }
 
 .cancel-btn-modern {
