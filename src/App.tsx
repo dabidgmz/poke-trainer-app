@@ -19,7 +19,8 @@ import {
   search,
   flash,
   folder,
-  add
+  add,
+  shieldCheckmark
 } from 'ionicons/icons';
 import Tab1 from './pages/Tab1';
 import Tab2 from './pages/Tab2';
@@ -99,10 +100,6 @@ const App: React.FC = () => (
           <IonTabButton tab="tab4" href="/tab4">
             <IonIcon aria-hidden="true" icon={camera} />
             <IonLabel>Capturar</IonLabel>
-          </IonTabButton>
-          <IonTabButton tab="tab5" href="/tab5">
-            <IonIcon aria-hidden="true" icon={person} />
-            <IonLabel>Perfil</IonLabel>
           </IonTabButton>
         </IonTabBar>
       </IonTabs>

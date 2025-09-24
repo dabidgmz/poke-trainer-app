@@ -1,299 +1,296 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   IonContent, 
   IonHeader, 
   IonPage, 
   IonTitle, 
   IonToolbar, 
+  IonButton,
+  IonIcon,
   IonCard,
   IonCardContent,
   IonCardHeader,
   IonCardTitle,
-  IonItem,
-  IonLabel,
-  IonAvatar,
-  IonIcon,
-  IonButton,
-  IonInput
+  IonAlert,
+  IonSpinner,
+  IonGrid,
+  IonRow,
+  IonCol,
+  IonChip,
+  IonLabel
 } from '@ionic/react';
 import { 
+  eye, 
+  checkmarkCircle, 
+  closeCircle, 
+  shieldCheckmark,
+  lockClosed,
   person, 
-  mail, 
-  calendar, 
-  location, 
-  create,
-  close,
-  checkmarkCircle,
-  flame,
-  water,
-  leaf,
-  flash
+  key
 } from 'ionicons/icons';
 import './Tab5.css';
 
-interface TrainerProfile {
-  name: string;
-  email: string;
-  birthDate: string;
-  location: string;
-  level: number;
-  experience: number;
-  badges: number;
-  pokemonCaught: number;
-  favoriteType: string;
-  joinDate: string;
-  avatar: string;
+// Import del plugin BiometricAuth
+import { BiometricAuth, BiometryType } from '@aparajita/capacitor-biometric-auth';
+
+interface BiometricResult {
+  isAvailable: boolean;
+  hasCredentials: boolean;
+  isVerified: boolean;
+  isFaceID: boolean;
 }
 
 const Tab5: React.FC = () => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [profile, setProfile] = useState<TrainerProfile>({
-    name: 'Ash Ketchum',
-    email: 'ash.ketchum@pokemon.com',
-    birthDate: '1996-05-22',
-    location: 'Pallet Town, Kanto',
-    level: 25,
-    experience: 12500,
-    badges: 8,
-    pokemonCaught: 127,
-    favoriteType: 'electric',
-    joinDate: '2020-01-15',
-    avatar: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png'
+  const [biometricStatus, setBiometricStatus] = useState<BiometricResult>({
+    isAvailable: false,
+    hasCredentials: false,
+    isVerified: false,
+    isFaceID: false
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
-  const [editProfile, setEditProfile] = useState<TrainerProfile>(profile);
+  // Verificar disponibilidad biométrica al cargar
+  useEffect(() => {
+    const checkBiometricAvailability = async () => {
+      try {
+        console.log('Verificando disponibilidad biométrica...');
+        const result = await BiometricAuth.checkBiometry();
+        
+        console.log('Resultado completo:', result);
+        console.log('isAvailable:', result.isAvailable);
+        console.log('biometryType:', result.biometryType);
+        
+        const isFaceID = result.biometryType === BiometryType.faceId;
+        const isFingerprint = result.biometryType === BiometryType.touchId;
+        
+        setBiometricStatus(prev => ({
+          ...prev,
+          isAvailable: result.isAvailable,
+          isFaceID: isFaceID
+        }));
+        
+        console.log('Face ID disponible:', isFaceID);
+        console.log('Fingerprint disponible:', isFingerprint);
+        
+      } catch (error) {
+        console.error('Error verificando disponibilidad:', error);
+        console.error('Detalles del error:', error);
+        setBiometricStatus(prev => ({
+          ...prev,
+          isAvailable: false,
+          isFaceID: false
+        }));
+      }
+    };
+    
+    checkBiometricAvailability();
+  }, []);
 
-  const handleEdit = () => {
-    setEditProfile(profile);
-    setIsEditing(true);
+  const performBiometricVerification = async () => {
+    try {
+      setIsAuthenticating(true);
+      
+      const result = await BiometricAuth.authenticate({
+        reason: 'Para acceder a tu cuenta de Pokémon Trainer',
+      });
+      
+      console.log('Autenticación exitosa!');
+      
+      setBiometricStatus(prev => ({
+        ...prev,
+        isVerified: true
+      }));
+      setShowSuccess(true);
+      
+    } catch (error: any) {
+      console.error('Autenticación fallida:', error.message);
+      setErrorMessage('Face ID falló. Inténtalo de nuevo.');
+      setShowError(true);
+    } finally {
+      setIsAuthenticating(false);
+    }
   };
 
-  const handleSave = () => {
-    setProfile(editProfile);
-    setIsEditing(false);
+  const setupCredentials = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Simular guardado de credenciales
+      setBiometricStatus(prev => ({
+        ...prev,
+        hasCredentials: true
+      }));
+      
+      console.log('Credenciales guardadas exitosamente');
+    } catch (error) {
+      console.error('Error guardando credenciales:', error);
+      setErrorMessage('Error al guardar credenciales');
+      setShowError(true);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleCancel = () => {
-    setEditProfile(profile);
-    setIsEditing(false);
+  const deleteCredentials = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Simular eliminación de credenciales
+      setBiometricStatus(prev => ({
+        ...prev,
+        hasCredentials: false,
+        isVerified: false
+      }));
+      
+      console.log('Credenciales eliminadas');
+    } catch (error) {
+      console.error('Error eliminando credenciales:', error);
+      setErrorMessage('Error al eliminar credenciales');
+      setShowError(true);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleInputChange = (field: keyof TrainerProfile, value: string) => {
-    setEditProfile(prev => ({
+  const resetAuthentication = () => {
+    setBiometricStatus(prev => ({
       ...prev,
-      [field]: value
+      isVerified: false
     }));
+    setShowSuccess(false);
   };
-
-  const getTypeColor = (type: string) => {
-    const colors: { [key: string]: string } = {
-      electric: '#f59e0b',
-      fire: '#ef4444',
-      water: '#3b82f6',
-      grass: '#10b981',
-      dragon: '#7c3aed',
-      psychic: '#f472b6',
-      normal: '#6b7280',
-      fighting: '#dc2626',
-      flying: '#8b5cf6',
-      poison: '#a855f7',
-      ground: '#d97706',
-      rock: '#78716c',
-      bug: '#84cc16',
-      ghost: '#6366f1',
-      steel: '#64748b',
-      ice: '#06b6d4',
-      fairy: '#ec4899',
-      dark: '#374151'
-    };
-    return colors[type] || '#6b7280';
-  };
-
-  const getTypeIcon = (type: string) => {
-    const icons: { [key: string]: string } = {
-      electric: flash,
-      fire: flame,
-      water: water,
-      grass: leaf,
-      default: flash
-    };
-    return icons[type] || icons.default;
-  };
-
 
   return (
-    <IonPage className="profile-page">
-      <IonHeader className="profile-header">
-        <IonToolbar className="profile-toolbar">
-          <IonTitle className="profile-title">
-            <div className="profile-header-content">
-              <div className="profile-logo">
-                <div className="trainer-icon"></div>
+    <IonPage className="biometric-page">
+      <IonHeader className="biometric-header">
+        <IonToolbar className="biometric-toolbar">
+          <IonTitle className="biometric-title">
+            <div className="biometric-header-content">
+              <div className="biometric-logo">
+                <IonIcon icon={shieldCheckmark} />
               </div>
-              <span className="profile-text">MI PERFIL</span>
+              <span className="biometric-text">FACE ID</span>
             </div>
           </IonTitle>
         </IonToolbar>
       </IonHeader>
-      <IonContent fullscreen className="profile-content">
-        <div className="profile-body">
-          {/* Información principal del entrenador */}
-          <IonCard className="main-profile-card">
-            <IonCardContent>
-              <div className="profile-main-info">
-                <div className="avatar-section">
-                  <IonAvatar className="trainer-avatar">
-                    <img src={profile.avatar} alt="Avatar del entrenador" />
-                  </IonAvatar>
-                  <div className="level-badge">
-                    <span className="level-number">{profile.level}</span>
-                  </div>
+
+      <IonContent fullscreen className="biometric-content">
+        <div className="biometric-body">
+          
+          {/* Estado simplificado */}
+          <div className="biometric-status-section">
+            <IonCard className="status-card">
+              <IonCardContent>
+                <div className="status-item">
+                  <IonIcon 
+                    icon={biometricStatus.isAvailable ? checkmarkCircle : closeCircle} 
+                    className={`status-icon ${biometricStatus.isAvailable ? 'success' : 'error'}`}
+                  />
+                  <IonLabel>
+                    <h3>Face ID</h3>
+                    <p>{biometricStatus.isAvailable ? 'Disponible' : 'No disponible'}</p>
+                  </IonLabel>
                 </div>
-                
-                <div className="trainer-details">
-                  <h1 className="trainer-name">{profile.name}</h1>
-                  <p className="trainer-location">
-                    <IonIcon icon={location} />
-                    {profile.location}
+              </IonCardContent>
+            </IonCard>
+          </div>
+
+          {/* Pantalla de éxito */}
+          {showSuccess && (
+            <div className="success-screen">
+              <IonCard className="success-card">
+                <IonCardContent className="success-content">
+                  <div className="success-icon">
+                    <IonIcon icon={checkmarkCircle} />
+                  </div>
+                  <h2>¡Face ID Exitoso!</h2>
+                  <p>Has accedido exitosamente usando Face ID</p>
+                  <IonButton 
+                    expand="block" 
+                    onClick={resetAuthentication}
+                    className="success-btn"
+                  >
+                    <IonIcon icon={eye} slot="start" />
+                    Face ID
+                  </IonButton>
+                </IonCardContent>
+              </IonCard>
+                </div>
+          )}
+
+          {/* Controles simplificados */}
+          {!showSuccess && (
+            <div className="biometric-controls">
+              <IonCard className="controls-card">
+                <IonCardContent>
+                  <div className="control-buttons">
+                    
+                    {/* Botón principal de Face ID */}
+                    <IonButton 
+                      expand="block" 
+                      onClick={performBiometricVerification}
+                      disabled={isAuthenticating || !biometricStatus.isAvailable}
+                      className="auth-btn"
+                    >
+                      <IonIcon icon={eye} slot="start" />
+                      {isAuthenticating ? (
+                        <>
+                          <IonSpinner name="crescent" />
+                          Escaneando...
+                        </>
+                      ) : (
+                        'Face ID'
+                      )}
+                    </IonButton>
+
+                    {/* Guardar credenciales */}
+                    <IonButton 
+                      expand="block" 
+                      fill="outline" 
+                      onClick={setupCredentials}
+                      disabled={isLoading}
+                      className="setup-btn"
+                    >
+                      <IonIcon icon={key} slot="start" />
+                      {isLoading ? 'Guardando...' : 'Guardar Credenciales'}
+                    </IonButton>
+
+                  </div>
+                </IonCardContent>
+              </IonCard>
+            </div>
+          )}
+
+          {/* Información simplificada */}
+          <div className="biometric-info">
+            <IonCard className="info-card">
+              <IonCardContent>
+                <div className="info-content">
+                  <p>
+                    Face ID utiliza reconocimiento facial para verificar tu identidad 
+                    de forma rápida y segura.
                   </p>
-                  
                 </div>
-              </div>
             </IonCardContent>
           </IonCard>
-
-
-          {/* Información personal */}
-          <IonCard className="info-card">
-            <IonCardHeader>
-              <IonCardTitle>Información Personal</IonCardTitle>
-              <IonButton 
-                className="edit-btn" 
-                fill="clear" 
-                onClick={handleEdit}
-                disabled={isEditing}
-              >
-                <IonIcon icon={create} slot="start" />
-                Editar
-              </IonButton>
-            </IonCardHeader>
-            <IonCardContent>
-              {!isEditing ? (
-                <div className="info-display">
-                  <IonItem className="info-item">
-                    <IonIcon icon={person} slot="start" />
-                    <IonLabel>
-                      <h3>Nombre</h3>
-                      <p>{profile.name}</p>
-                    </IonLabel>
-                  </IonItem>
-                  
-                  <IonItem className="info-item">
-                    <IonIcon icon={mail} slot="start" />
-                    <IonLabel>
-                      <h3>Email</h3>
-                      <p>{profile.email}</p>
-                    </IonLabel>
-                  </IonItem>
-                  
-                  <IonItem className="info-item">
-                    <IonIcon icon={calendar} slot="start" />
-                    <IonLabel>
-                      <h3>Fecha de Nacimiento</h3>
-                      <p>{new Date(profile.birthDate).toLocaleDateString('es-ES')}</p>
-                    </IonLabel>
-                  </IonItem>
-                  
-                  <IonItem className="info-item">
-                    <IonIcon icon={location} slot="start" />
-                    <IonLabel>
-                      <h3>Ubicación</h3>
-                      <p>{profile.location}</p>
-                    </IonLabel>
-                  </IonItem>
-                  
-                  <IonItem className="info-item">
-                    <IonIcon icon={calendar} slot="start" />
-                    <IonLabel>
-                      <h3>Miembro desde</h3>
-                      <p>{new Date(profile.joinDate).toLocaleDateString('es-ES')}</p>
-                    </IonLabel>
-                  </IonItem>
-                  
-                </div>
-              ) : (
-                <div className="info-edit">
-                  <IonItem>
-                    <IonLabel position="stacked">Nombre</IonLabel>
-                    <IonInput
-                      value={editProfile.name}
-                      onIonInput={(e) => handleInputChange('name', e.detail.value!)}
-                      placeholder="Ingresa tu nombre"
-                    />
-                  </IonItem>
-                  
-                  <IonItem>
-                    <IonLabel position="stacked">Email</IonLabel>
-                    <IonInput
-                      type="email"
-                      value={editProfile.email}
-                      onIonInput={(e) => handleInputChange('email', e.detail.value!)}
-                      placeholder="Ingresa tu email"
-                    />
-                  </IonItem>
-                  
-                  <IonItem>
-                    <IonLabel position="stacked">Fecha de Nacimiento</IonLabel>
-                    <IonInput
-                      type="date"
-                      value={editProfile.birthDate}
-                      onIonInput={(e) => handleInputChange('birthDate', e.detail.value!)}
-                    />
-                  </IonItem>
-                  
-                  <IonItem>
-                    <IonLabel position="stacked">Ubicación</IonLabel>
-                    <IonInput
-                      value={editProfile.location}
-                      onIonInput={(e) => handleInputChange('location', e.detail.value!)}
-                      placeholder="Ingresa tu ubicación"
-                    />
-                  </IonItem>
-                  
-                  <IonItem>
-                    <IonLabel position="stacked">Tipo Favorito</IonLabel>
-                    <IonInput
-                      value={editProfile.favoriteType}
-                      onIonInput={(e) => handleInputChange('favoriteType', e.detail.value!)}
-                      placeholder="electric, fire, water, etc."
-                    />
-                  </IonItem>
-                  
-                  
-                  <div className="edit-actions">
-                    <IonButton 
-                      className="save-btn" 
-                      onClick={handleSave}
-                      color="success"
-                    >
-                      <IonIcon icon={checkmarkCircle} slot="start" />
-                      Guardar
-                    </IonButton>
-                    <IonButton 
-                      className="cancel-btn" 
-                      onClick={handleCancel}
-                      fill="outline"
-                    >
-                      <IonIcon icon={close} slot="start" />
-                      Cancelar
-                    </IonButton>
-                  </div>
-                </div>
-              )}
-            </IonCardContent>
-          </IonCard>
+          </div>
 
         </div>
+
+        {/* Alertas */}
+        <IonAlert
+          isOpen={showError}
+          onDidDismiss={() => setShowError(false)}
+          header="Error"
+          message={errorMessage}
+          buttons={['OK']}
+        />
+
       </IonContent>
     </IonPage>
   );

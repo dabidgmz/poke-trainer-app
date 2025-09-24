@@ -16,7 +16,8 @@ const config: CapacitorConfig = {
       'android.permission.WRITE_EXTERNAL_STORAGE',
       'android.permission.READ_EXTERNAL_STORAGE',
       'android.permission.INTERNET',
-      'android.permission.ACCESS_NETWORK_STATE'
+      'android.permission.ACCESS_NETWORK_STATE',
+      'android.permission.USE_BIOMETRIC'
     ],
     allowMixedContent: true
   }
