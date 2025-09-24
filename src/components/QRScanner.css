@@ -430,6 +430,54 @@
   font-size: 1.5rem;
 }
 
+.camera-toggle-btn {
+  --color: #4CAF50;
+  font-size: 1.5rem;
+  --background: rgba(76, 175, 80, 0.1);
+  --border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  transition: all 0.3s ease;
+}
+
+.camera-toggle-btn:hover {
+  --background: rgba(76, 175, 80, 0.2);
+  transform: scale(1.1);
+}
+
+.camera-capture-btn {
+  --color: #2196F3;
+  font-size: 1.5rem;
+  --background: rgba(33, 150, 243, 0.1);
+  --border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  transition: all 0.3s ease;
+}
+
+.camera-capture-btn:hover {
+  --background: rgba(33, 150, 243, 0.2);
+  transform: scale(1.1);
+}
+
+.ios-alternative {
+  margin-top: 15px;
+  padding: 10px;
+  background: rgba(255, 152, 0, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 152, 0, 0.3);
+}
+
+.ios-note {
+  margin: 0 !important;
+  font-size: 12px !important;
+  color: #ff9800 !important;
+  font-weight: 500 !important;
+  text-shadow: none !important;
+  -webkit-text-fill-color: #ff9800 !important;
+  background: none !important;
+}
+
 /* Overlay de escaneo QR */
 .qr-overlay {
   position: fixed;
@@ -526,6 +574,16 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.camera-indicator {
+  margin-top: 10px !important;
+  font-size: 14px !important;
+  color: #4CAF50 !important;
+  font-weight: 600 !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8) !important;
+  -webkit-text-fill-color: #4CAF50 !important;
+  background: none !important;
 }
 
 
