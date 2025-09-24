@@ -1,13 +1,15 @@
-// Tab5.tsx
+// src/pages/Tab5.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton,
   IonContent, IonList, IonItem, IonLabel, IonText, IonListHeader,
-  IonSelect, IonSelectOption, IonCheckbox, IonInput
+  IonSelect, IonSelectOption, IonCheckbox, IonInput,
+  IonFab, IonFabButton, IonIcon
 } from '@ionic/react';
 import { alertController } from '@ionic/core';
 import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from '@capacitor/splash-screen';
+import { fingerPrint } from 'ionicons/icons';
 
 import {
   AndroidBiometryStrength,
@@ -20,11 +22,11 @@ import {
   getBiometryName,
 } from '@aparajita/capacitor-biometric-auth';
 import { type PluginListenerHandle } from '@capacitor/core';
+
 type BiometryTypeEntry = { title: string; type: number };
 
 const BIOMETRY_TYPES: BiometryTypeEntry[] = [
   { title: 'None', type: BiometryType.none },
-
   { title: 'Touch ID', type: BiometryType.touchId },
   { title: 'Face ID', type: BiometryType.faceId },
   { title: 'Fingerprint', type: BiometryType.fingerprintAuthentication },
@@ -124,7 +126,7 @@ const Tab5: React.FC = () => {
       try {
         await SplashScreen.hide();
       } catch {
-        /* no-op on web */
+        /* no-op */
       }
     })();
 
@@ -136,7 +138,7 @@ const Tab5: React.FC = () => {
   // ---------- Handlers ----------
   const onAuthenticate = async () => {
     try {
-      await BiometricAuth.authenticate({ ...options }); // en React no hay proxies reactivas
+      await BiometricAuth.authenticate({ ...options });
       await showAlert('Authorization successful!');
     } catch (error) {
       await showErrorAlert(error as BiometryError);
@@ -186,6 +188,11 @@ const Tab5: React.FC = () => {
       <IonHeader>
         <IonToolbar>
           <IonTitle>Biometry</IonTitle>
+
+          {/* Cubrimos iOS/MD */}
+          <IonButtons slot="primary">
+            <IonButton onClick={onAuthenticate}>Authenticate</IonButton>
+          </IonButtons>
           <IonButtons slot="end">
             <IonButton onClick={onAuthenticate}>Authenticate</IonButton>
           </IonButtons>
@@ -193,11 +200,17 @@ const Tab5: React.FC = () => {
       </IonHeader>
 
       <IonContent scrollY>
+        {/* FAB de respaldo, siempre visible */}
+        <IonFab vertical="bottom" horizontal="end" slot="fixed">
+          <IonFabButton onClick={onAuthenticate}>
+            <IonIcon icon={fingerPrint} />
+          </IonFabButton>
+        </IonFab>
+
         <IonList lines="full">
           <IonItem>
             <IonLabel>
               <h3 className="!text-sm">Supported biometry</h3>
-              {/* mostrar HTML con <br> entre tipos */}
               <div dangerouslySetInnerHTML={{ __html: biometryNames }} />
             </IonLabel>
           </IonItem>
