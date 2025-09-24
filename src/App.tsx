@@ -101,6 +101,10 @@ const App: React.FC = () => (
             <IonIcon aria-hidden="true" icon={camera} />
             <IonLabel>Capturar</IonLabel>
           </IonTabButton>
+          <IonTabButton tab="tab5" href="/tab5">
+            <IonIcon aria-hidden="true" icon={shieldCheckmark} />
+            <IonLabel>Seguridad</IonLabel>
+          </IonTabButton>
         </IonTabBar>
       </IonTabs>
     </IonReactRouter>

@@ -28,6 +28,7 @@
     "@types/react-router-dom": "^5.3.3",
     "@zxing/browser": "^0.1.5",
     "@zxing/library": "^0.21.3",
+    "capacitor-native-biometric": "^4.2.2",
     "ionicons": "^7.4.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",

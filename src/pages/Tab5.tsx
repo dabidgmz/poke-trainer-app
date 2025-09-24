@@ -1,296 +1,114 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
-  IonContent, 
+  IonPage,
   IonHeader, 
-  IonPage, 
+  IonToolbar,
   IonTitle, 
-  IonToolbar, 
+  IonContent,
   IonButton,
-  IonIcon,
   IonCard,
   IonCardContent,
-  IonCardHeader,
-  IonCardTitle,
-  IonAlert,
-  IonSpinner,
-  IonGrid,
-  IonRow,
-  IonCol,
-  IonChip,
-  IonLabel
+  IonText
 } from '@ionic/react';
-import { 
-  eye, 
-  checkmarkCircle, 
-  closeCircle, 
-  shieldCheckmark,
-  lockClosed,
-  person, 
-  key
-} from 'ionicons/icons';
-import './Tab5.css';
-
-// Import del plugin BiometricAuth
-import { BiometricAuth, BiometryType } from '@aparajita/capacitor-biometric-auth';
-
-interface BiometricResult {
-  isAvailable: boolean;
-  hasCredentials: boolean;
-  isVerified: boolean;
-  isFaceID: boolean;
-}
+import { NativeBiometric, BiometryType } from "capacitor-native-biometric";
 
 const Tab5: React.FC = () => {
-  const [biometricStatus, setBiometricStatus] = useState<BiometricResult>({
-    isAvailable: false,
-    hasCredentials: false,
-    isVerified: false,
-    isFaceID: false
-  });
-  const [isLoading, setIsLoading] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [showError, setShowError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [isAvailable, setIsAvailable] = useState(false);
+  const [biometry, setBiometry] = useState<string>('');
+  const [message, setMessage] = useState<string>('');
 
-  // Verificar disponibilidad biométrica al cargar
   useEffect(() => {
-    const checkBiometricAvailability = async () => {
+    const checkBiometry = async () => {
       try {
-        console.log('Verificando disponibilidad biométrica...');
-        const result = await BiometricAuth.checkBiometry();
-        
-        console.log('Resultado completo:', result);
-        console.log('isAvailable:', result.isAvailable);
-        console.log('biometryType:', result.biometryType);
-        
-        const isFaceID = result.biometryType === BiometryType.faceId;
-        const isFingerprint = result.biometryType === BiometryType.touchId;
-        
-        setBiometricStatus(prev => ({
-          ...prev,
-          isAvailable: result.isAvailable,
-          isFaceID: isFaceID
-        }));
-        
-        console.log('Face ID disponible:', isFaceID);
-        console.log('Fingerprint disponible:', isFingerprint);
-        
-      } catch (error) {
-        console.error('Error verificando disponibilidad:', error);
-        console.error('Detalles del error:', error);
-        setBiometricStatus(prev => ({
-          ...prev,
-          isAvailable: false,
-          isFaceID: false
-        }));
+        const result = await NativeBiometric.isAvailable();
+        setIsAvailable(result.isAvailable);
+        if (result.biometryType === BiometryType.FACE_ID) setBiometry('Face ID');
+        else if (result.biometryType === BiometryType.FINGERPRINT) setBiometry('Fingerprint');
+        else setBiometry('');
+      } catch (err) {
+        setIsAvailable(false);
+        setBiometry('');
       }
     };
-    
-    checkBiometricAvailability();
+    checkBiometry();
   }, []);
 
   const performBiometricVerification = async () => {
     try {
-      setIsAuthenticating(true);
+      setMessage('');
       
-      const result = await BiometricAuth.authenticate({
-        reason: 'Para acceder a tu cuenta de Pokémon Trainer',
+      const result = await NativeBiometric.isAvailable();
+      if (!result.isAvailable) {
+        setMessage('Autenticación biométrica no disponible');
+        return;
+      }
+
+      const isFaceID = result.biometryType === BiometryType.FACE_ID;
+
+      const verified = await NativeBiometric.verifyIdentity({
+        reason: "Para acceder a Pokémon Trainer App",
+        title: "Autenticación",
+        subtitle: "Pokémon Trainer App",
+        description: "Usa tu huella dactilar o Face ID para acceder",
+      })
+        .then(() => true)
+        .catch(() => false);
+
+      if (!verified) {
+        setMessage('Autenticación fallida');
+        return;
+      }
+
+      setMessage('¡Autenticación exitosa!');
+    } catch (err: any) {
+      setMessage(`Fallo de autenticación${err?.message ? `: ${err.message}` : ''}`);
+    }
+  };
+
+  const saveCredentials = async () => {
+    try {
+      setMessage('');
+      await NativeBiometric.setCredentials({
+        username: "username",
+        password: "password",
+        server: "pokeapptrainer.web.app",
       });
-      
-      console.log('Autenticación exitosa!');
-      
-      setBiometricStatus(prev => ({
-        ...prev,
-        isVerified: true
-      }));
-      setShowSuccess(true);
-      
-    } catch (error: any) {
-      console.error('Autenticación fallida:', error.message);
-      setErrorMessage('Face ID falló. Inténtalo de nuevo.');
-      setShowError(true);
-    } finally {
-      setIsAuthenticating(false);
+      setMessage('Credenciales guardadas exitosamente');
+    } catch (err: any) {
+      setMessage(`Error guardando credenciales${err?.message ? `: ${err.message}` : ''}`);
     }
   };
 
-  const setupCredentials = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Simular guardado de credenciales
-      setBiometricStatus(prev => ({
-        ...prev,
-        hasCredentials: true
-      }));
-      
-      console.log('Credenciales guardadas exitosamente');
-    } catch (error) {
-      console.error('Error guardando credenciales:', error);
-      setErrorMessage('Error al guardar credenciales');
-      setShowError(true);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const deleteCredentials = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Simular eliminación de credenciales
-      setBiometricStatus(prev => ({
-        ...prev,
-        hasCredentials: false,
-        isVerified: false
-      }));
-      
-      console.log('Credenciales eliminadas');
-    } catch (error) {
-      console.error('Error eliminando credenciales:', error);
-      setErrorMessage('Error al eliminar credenciales');
-      setShowError(true);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const resetAuthentication = () => {
-    setBiometricStatus(prev => ({
-      ...prev,
-      isVerified: false
-    }));
-    setShowSuccess(false);
-  };
 
   return (
-    <IonPage className="biometric-page">
-      <IonHeader className="biometric-header">
-        <IonToolbar className="biometric-toolbar">
-          <IonTitle className="biometric-title">
-            <div className="biometric-header-content">
-              <div className="biometric-logo">
-                <IonIcon icon={shieldCheckmark} />
-              </div>
-              <span className="biometric-text">FACE ID</span>
-            </div>
-          </IonTitle>
+    <IonPage>
+      <IonHeader>
+        <IonToolbar>
+          <IonTitle>Seguridad</IonTitle>
         </IonToolbar>
       </IonHeader>
-
-      <IonContent fullscreen className="biometric-content">
-        <div className="biometric-body">
-          
-          {/* Estado simplificado */}
-          <div className="biometric-status-section">
-            <IonCard className="status-card">
-              <IonCardContent>
-                <div className="status-item">
-                  <IonIcon 
-                    icon={biometricStatus.isAvailable ? checkmarkCircle : closeCircle} 
-                    className={`status-icon ${biometricStatus.isAvailable ? 'success' : 'error'}`}
-                  />
-                  <IonLabel>
-                    <h3>Face ID</h3>
-                    <p>{biometricStatus.isAvailable ? 'Disponible' : 'No disponible'}</p>
-                  </IonLabel>
-                </div>
-              </IonCardContent>
-            </IonCard>
-          </div>
-
-          {/* Pantalla de éxito */}
-          {showSuccess && (
-            <div className="success-screen">
-              <IonCard className="success-card">
-                <IonCardContent className="success-content">
-                  <div className="success-icon">
-                    <IonIcon icon={checkmarkCircle} />
-                  </div>
-                  <h2>¡Face ID Exitoso!</h2>
-                  <p>Has accedido exitosamente usando Face ID</p>
-                  <IonButton 
-                    expand="block" 
-                    onClick={resetAuthentication}
-                    className="success-btn"
-                  >
-                    <IonIcon icon={eye} slot="start" />
-                    Face ID
-                  </IonButton>
-                </IonCardContent>
-              </IonCard>
-                </div>
-          )}
-
-          {/* Controles simplificados */}
-          {!showSuccess && (
-            <div className="biometric-controls">
-              <IonCard className="controls-card">
-                <IonCardContent>
-                  <div className="control-buttons">
-                    
-                    {/* Botón principal de Face ID */}
-                    <IonButton 
-                      expand="block" 
-                      onClick={performBiometricVerification}
-                      disabled={isAuthenticating || !biometricStatus.isAvailable}
-                      className="auth-btn"
-                    >
-                      <IonIcon icon={eye} slot="start" />
-                      {isAuthenticating ? (
-                        <>
-                          <IonSpinner name="crescent" />
-                          Escaneando...
-                        </>
-                      ) : (
-                        'Face ID'
-                      )}
-                    </IonButton>
-
-                    {/* Guardar credenciales */}
-                    <IonButton 
-                      expand="block" 
-                      fill="outline" 
-                      onClick={setupCredentials}
-                      disabled={isLoading}
-                      className="setup-btn"
-                    >
-                      <IonIcon icon={key} slot="start" />
-                      {isLoading ? 'Guardando...' : 'Guardar Credenciales'}
-                    </IonButton>
-
-                  </div>
-                </IonCardContent>
-              </IonCard>
-            </div>
-          )}
-
-          {/* Información simplificada */}
-          <div className="biometric-info">
-            <IonCard className="info-card">
-              <IonCardContent>
-                <div className="info-content">
-                  <p>
-                    Face ID utiliza reconocimiento facial para verificar tu identidad 
-                    de forma rápida y segura.
-                  </p>
-                </div>
+      <IonContent className="ion-padding">
+        <IonCard>
+            <IonCardContent>
+            <IonText>
+              <p>Disponibilidad biométrica: {isAvailable ? 'Disponible' : 'No disponible'}</p>
+              {biometry && <p>Tipo: {biometry}</p>}
+            </IonText>
+            <IonButton expand="block" onClick={performBiometricVerification} disabled={!isAvailable}>
+              {biometry ? biometry : 'Autenticación biométrica'}
+            </IonButton>
+            
+            <IonButton expand="block" fill="outline" onClick={saveCredentials} style={{ marginTop: 10 }}>
+              Guardar Credenciales
+            </IonButton>
+            
+            {message && (
+              <IonText color={message.includes('exitosa') ? 'success' : 'danger'}>
+                <p style={{ marginTop: 12 }}>{message}</p>
+              </IonText>
+            )}
             </IonCardContent>
           </IonCard>
-          </div>
-
-        </div>
-
-        {/* Alertas */}
-        <IonAlert
-          isOpen={showError}
-          onDidDismiss={() => setShowError(false)}
-          header="Error"
-          message={errorMessage}
-          buttons={['OK']}
-        />
-
       </IonContent>
     </IonPage>
   );
