@@ -1,142 +1,368 @@
-import React, { useEffect, useState } from 'react';
-import { 
-  IonPage,
-  IonHeader, 
-  IonToolbar,
-  IonTitle, 
-  IonContent,
-  IonButton,
-  IonCard,
-  IonCardContent,
-  IonText
+// Tab5.tsx
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton,
+  IonContent, IonList, IonItem, IonLabel, IonText, IonListHeader,
+  IonSelect, IonSelectOption, IonCheckbox, IonInput
 } from '@ionic/react';
+import { alertController } from '@ionic/core';
 import { Capacitor } from '@capacitor/core';
-import { NativeBiometric, BiometryType } from "@capgo/capacitor-native-biometric";
+import { SplashScreen } from '@capacitor/splash-screen';
+
+import {
+  AndroidBiometryStrength,
+  type AuthenticateOptions,
+  BiometricAuth,
+  type BiometryError,
+  BiometryErrorType,
+  BiometryType,
+  type CheckBiometryResult,
+  getBiometryName,
+} from '@aparajita/capacitor-biometric-auth';
+import { type PluginListenerHandle } from '@capacitor/core';
+type BiometryTypeEntry = { title: string; type: number };
+
+const BIOMETRY_TYPES: BiometryTypeEntry[] = [
+  { title: 'None', type: BiometryType.none },
+
+  { title: 'Touch ID', type: BiometryType.touchId },
+  { title: 'Face ID', type: BiometryType.faceId },
+  { title: 'Fingerprint', type: BiometryType.fingerprintAuthentication },
+  {
+    title: 'Fingerprint + face',
+    type: BiometryType.fingerprintAuthentication * 10 + BiometryType.faceAuthentication,
+  },
+  {
+    title: 'Fingerprint + iris',
+    type: BiometryType.fingerprintAuthentication * 10 + BiometryType.irisAuthentication,
+  },
+];
 
 const Tab5: React.FC = () => {
-  const [isAvailable, setIsAvailable] = useState(false);
-  const [biometry, setBiometry] = useState<string>('');
-  const [message, setMessage] = useState<string>('');
+  // ---------- State ----------
+  const [biometry, setBiometry] = useState<CheckBiometryResult>({
+    isAvailable: false,
+    strongBiometryIsAvailable: false,
+    biometryType: BiometryType.none,
+    biometryTypes: [],
+    deviceIsSecure: false,
+    reason: '',
+    code: BiometryErrorType.none,
+    strongReason: '',
+    strongCode: BiometryErrorType.none,
+  });
 
+  const [options, setOptions] = useState<AuthenticateOptions>({
+    reason: '',
+    cancelTitle: '',
+    iosFallbackTitle: '',
+    androidTitle: '',
+    androidSubtitle: '',
+    allowDeviceCredential: false,
+    androidConfirmationRequired: false,
+    androidBiometryStrength: AndroidBiometryStrength.weak,
+  });
+
+  const [biometryType, setBiometryType] = useState<number>(BiometryType.none);
+  const [onlyUseStrongBiometry, setOnlyUseStrongBiometry] = useState<boolean>(false);
+  const [isEnrolled, setIsEnrolled] = useState<boolean>(false);
+  const [deviceIsSecure, setDeviceIsSecure] = useState<boolean>(false);
+
+  const appListener = useRef<PluginListenerHandle | null>(null);
+
+  const isNative = Capacitor.isNativePlatform();
+  const platform = Capacitor.getPlatform();
+  const isIOS = platform === 'ios';
+  const isAndroid = platform === 'android';
+
+  // ---------- Computed ----------
+  const biometryName = useMemo(() => {
+    if (biometry.biometryTypes.length === 0) return 'No biometry';
+    if (biometry.biometryTypes.length === 1) return getBiometryName(biometry.biometryType);
+    return 'Biometry';
+  }, [biometry]);
+
+  const biometryNames = useMemo(() => {
+    if (biometry.biometryTypes.length === 0) return 'None';
+    return biometry.biometryTypes.map((t) => getBiometryName(t)).join('<br>');
+  }, [biometry]);
+
+  const availableBiometry = useMemo(() => {
+    if (biometry.isAvailable) {
+      return biometry.biometryTypes.length > 1 ? 'One or more' : 'Yes';
+    }
+    return 'None';
+  }, [biometry]);
+
+  // ---------- Helpers ----------
+  const updateBiometryInfo = (info: CheckBiometryResult) => setBiometry(info);
+
+  const showAlert = async (message: string) => {
+    const alert = await alertController.create({
+      header: `${biometryName} says:`,
+      message,
+      buttons: ['OK'],
+    });
+    await alert.present();
+  };
+
+  const showErrorAlert = async (error: BiometryError) => {
+    await showAlert(`${error.message} [${error.code}].`);
+  };
+
+  // ---------- Effects ----------
   useEffect(() => {
-    const checkBiometry = async () => {
+    (async () => {
       try {
-        if (!Capacitor.isNativePlatform()) {
-          console.warn('[Biometric] checkBiometry: plataforma web/PWA, plugin no disponible');
-          setIsAvailable(false);
-          setBiometry('');
-          return;
-        }
-        console.log('[Biometric] checkBiometry: iniciando verificación...');
-        const result = await NativeBiometric.isAvailable();
-        console.log('[Biometric] isAvailable result:', result);
-        setIsAvailable(result.isAvailable);
-        if (result.biometryType === BiometryType.FACE_ID) setBiometry('Face ID');
-        else if (result.biometryType === BiometryType.FINGERPRINT) setBiometry('Fingerprint');
-        else setBiometry('');
-      } catch (err) {
-        console.error('[Biometric] checkBiometry error:', err);
-        setIsAvailable(false);
-        setBiometry('');
+        updateBiometryInfo(await BiometricAuth.checkBiometry());
+        appListener.current = await BiometricAuth.addResumeListener((info) => {
+          updateBiometryInfo(info);
+        });
+      } catch (e) {
+        console.error((e as Error).message);
       }
+      try {
+        await SplashScreen.hide();
+      } catch {
+        /* no-op on web */
+      }
+    })();
+
+    return () => {
+      appListener.current?.remove?.();
     };
-    checkBiometry();
   }, []);
 
-  const performBiometricVerification = async () => {
+  // ---------- Handlers ----------
+  const onAuthenticate = async () => {
     try {
-      setMessage('');
-      
-      if (!Capacitor.isNativePlatform()) {
-        console.warn('[Biometric] performBiometricVerification: plataforma web/PWA, plugin no disponible');
-        setMessage('La autenticación biométrica solo funciona en dispositivo nativo');
-        return;
-      }
-      
-      console.log('[Biometric] performBiometricVerification: comprobando disponibilidad...');
-      const result = await NativeBiometric.isAvailable();
-      console.log('[Biometric] isAvailable result:', result);
-      if (!result.isAvailable) {
-        console.warn('[Biometric] No disponible en este dispositivo');
-        setMessage('Autenticación biométrica no disponible');
-        return;
-      }
-
-      const isFaceID = result.biometryType === BiometryType.FACE_ID;
-      console.log('[Biometric] Tipo de biometry:', isFaceID ? 'Face ID' : 'Fingerprint/otro');
-
-      console.log('[Biometric] lanzando verifyIdentity...');
-      const verified = await NativeBiometric.verifyIdentity({
-        reason: "Para acceder a Pokémon Trainer App",
-        title: "Autenticación",
-        subtitle: "Pokémon Trainer App",
-        description: "Usa tu huella dactilar o Face ID para acceder",
-      })
-        .then(() => true)
-        .catch(() => false);
-      console.log('[Biometric] verifyIdentity -> verified:', verified);
-
-      if (!verified) {
-        console.warn('[Biometric] Verificación fallida/cancelada por el usuario');
-        setMessage('Autenticación fallida');
-        return;
-      }
-
-      setMessage('¡Autenticación exitosa!');
-    } catch (err: any) {
-      console.error('[Biometric] performBiometricVerification error:', {
-        message: err?.message,
-        code: err?.code,
-        name: err?.name,
-      });
-      setMessage(`Fallo de autenticación${err?.message ? `: ${err.message}` : ''}`);
+      await BiometricAuth.authenticate({ ...options }); // en React no hay proxies reactivas
+      await showAlert('Authorization successful!');
+    } catch (error) {
+      await showErrorAlert(error as BiometryError);
     }
   };
 
-  const saveCredentials = async () => {
-    try {
-      setMessage('');
-      await NativeBiometric.setCredentials({
-        username: "username",
-        password: "password",
-        server: "pokeapptrainer.web.app",
-      });
-      setMessage('Credenciales guardadas exitosamente');
-    } catch (err: any) {
-      setMessage(`Error guardando credenciales${err?.message ? `: ${err.message}` : ''}`);
+  const onSelectBiometry = async (value: string | number) => {
+    const typeNum = Number(value);
+    setBiometryType(typeNum);
+
+    if (typeNum > 10) {
+      const primary = Math.floor(typeNum / 10) as BiometryType;
+      const secondary = (typeNum % 10) as BiometryType;
+      await BiometricAuth.setBiometryType([primary, secondary]);
+    } else {
+      await BiometricAuth.setBiometryType(typeNum === 0 ? BiometryType.none : (typeNum as BiometryType));
     }
+    updateBiometryInfo(await BiometricAuth.checkBiometry());
   };
 
+  const onSetAndroidBiometryStrength = () => {
+    setOnlyUseStrongBiometry((prev) => {
+      const next = !prev;
+      setOptions((o) => ({
+        ...o,
+        androidBiometryStrength: next ? AndroidBiometryStrength.strong : AndroidBiometryStrength.weak,
+      }));
+      return next;
+    });
+  };
 
+  const onSetIsEnrolled = async (checked: boolean) => {
+    setIsEnrolled(checked);
+    await BiometricAuth.setBiometryIsEnrolled(checked);
+    updateBiometryInfo(await BiometricAuth.checkBiometry());
+  };
+
+  const onSetDeviceIsSecure = async (checked: boolean) => {
+    setDeviceIsSecure(checked);
+    await BiometricAuth.setDeviceIsSecure(checked);
+    updateBiometryInfo(await BiometricAuth.checkBiometry());
+  };
+
+  // ---------- Render ----------
   return (
-    <IonPage>
+    <IonPage className="w-full h-full">
       <IonHeader>
         <IonToolbar>
-          <IonTitle>Seguridad</IonTitle>
+          <IonTitle>Biometry</IonTitle>
+          <IonButtons slot="end">
+            <IonButton onClick={onAuthenticate}>Authenticate</IonButton>
+          </IonButtons>
         </IonToolbar>
       </IonHeader>
-      <IonContent className="ion-padding">
-        <IonCard>
-            <IonCardContent>
-            <IonText>
-              <p>Disponibilidad biométrica: {isAvailable ? 'Disponible' : 'No disponible'}</p>
-              {biometry && <p>Tipo: {biometry}</p>}
-            </IonText>
-            <IonButton expand="block" onClick={performBiometricVerification} disabled={!isAvailable}>
-              {biometry ? biometry : 'Autenticación biométrica'}
-            </IonButton>
-            
-            <IonButton expand="block" fill="outline" onClick={saveCredentials} style={{ marginTop: 10 }}>
-              Guardar Credenciales
-            </IonButton>
-            
-            {message && (
-              <IonText color={message.includes('exitosa') ? 'success' : 'danger'}>
-                <p style={{ marginTop: 12 }}>{message}</p>
-              </IonText>
-            )}
-            </IonCardContent>
-          </IonCard>
+
+      <IonContent scrollY>
+        <IonList lines="full">
+          <IonItem>
+            <IonLabel>
+              <h3 className="!text-sm">Supported biometry</h3>
+              {/* mostrar HTML con <br> entre tipos */}
+              <div dangerouslySetInnerHTML={{ __html: biometryNames }} />
+            </IonLabel>
+          </IonItem>
+
+          <IonItem>
+            <IonLabel>
+              <IonText className="block">Biometry available</IonText>
+              <IonText className="block !text-sm text-neutral-400">{biometry.reason}</IonText>
+            </IonLabel>
+            <IonText slot="end">{availableBiometry}</IonText>
+          </IonItem>
+
+          <IonItem>
+            <IonLabel>
+              <IonText className="block">Strong biometry available</IonText>
+              <IonText className="block !text-sm text-neutral-400">{biometry.strongReason}</IonText>
+            </IonLabel>
+            <IonText slot="end">{biometry.strongBiometryIsAvailable ? 'Yes' : 'No'}</IonText>
+          </IonItem>
+
+          <IonItem>
+            <IonLabel>Device is secure</IonLabel>
+            <IonText slot="end">{biometry.deviceIsSecure ? 'Yes' : 'No'}</IonText>
+          </IonItem>
+        </IonList>
+
+        <IonList className="mt-6" lines="full">
+          <IonListHeader>Options</IonListHeader>
+
+          {!isNative && (
+            <>
+              <IonItem>
+                <IonSelect
+                  label="Biometry"
+                  interface="action-sheet"
+                  interfaceOptions={{ header: 'Select biometry type' }}
+                  className="[--padding-start:0px] max-w-full"
+                  value={biometryType}
+                  onIonChange={(e) => onSelectBiometry(e.detail.value!)}
+                >
+                  {BIOMETRY_TYPES.map((entry) => (
+                    <IonSelectOption key={entry.type} value={entry.type}>
+                      {entry.title}
+                    </IonSelectOption>
+                  ))}
+                </IonSelect>
+              </IonItem>
+
+              <IonItem>
+                <IonCheckbox
+                  checked={isEnrolled}
+                  disabled={biometry.biometryType === BiometryType.none}
+                  onIonChange={(e) => onSetIsEnrolled(e.detail.checked)}
+                >
+                  Enrolled
+                </IonCheckbox>
+              </IonItem>
+
+              <IonItem>
+                <IonCheckbox
+                  checked={deviceIsSecure}
+                  onIonChange={(e) => onSetDeviceIsSecure(e.detail.checked)}
+                >
+                  Device is secure
+                </IonCheckbox>
+              </IonItem>
+            </>
+          )}
+
+          {isAndroid && (
+            <IonItem>
+              <IonCheckbox
+                checked={onlyUseStrongBiometry}
+                onIonChange={onSetAndroidBiometryStrength}
+              >
+                Only use strong biometry
+              </IonCheckbox>
+            </IonItem>
+          )}
+
+          <IonItem>
+            <IonCheckbox
+              checked={!!options.allowDeviceCredential}
+              onIonChange={(e) =>
+                setOptions((o) => ({ ...o, allowDeviceCredential: e.detail.checked }))
+              }
+            >
+              Allow device credential
+            </IonCheckbox>
+          </IonItem>
+
+          {isAndroid && (
+            <IonItem>
+              <IonCheckbox
+                checked={!!options.androidConfirmationRequired}
+                onIonChange={(e) =>
+                  setOptions((o) => ({ ...o, androidConfirmationRequired: e.detail.checked }))
+                }
+              >
+                Require confirmation
+              </IonCheckbox>
+            </IonItem>
+          )}
+
+          {isAndroid && (
+            <>
+              <IonItem>
+                <IonInput
+                  label="Title:"
+                  type="text"
+                  value={options.androidTitle}
+                  onIonChange={(e) =>
+                    setOptions((o) => ({ ...o, androidTitle: e.detail.value ?? '' }))
+                  }
+                />
+              </IonItem>
+
+              <IonItem>
+                <IonInput
+                  label="Subtitle:"
+                  type="text"
+                  value={options.androidSubtitle}
+                  onIonChange={(e) =>
+                    setOptions((o) => ({ ...o, androidSubtitle: e.detail.value ?? '' }))
+                  }
+                />
+              </IonItem>
+            </>
+          )}
+
+          <IonItem>
+            <IonInput
+              label="Reason:"
+              type="text"
+              value={options.reason}
+              onIonChange={(e) => setOptions((o) => ({ ...o, reason: e.detail.value ?? '' }))}
+            />
+          </IonItem>
+
+          {isNative && (
+            <IonItem>
+              <IonInput
+                label="Cancel title:"
+                type="text"
+                value={options.cancelTitle}
+                onIonChange={(e) =>
+                  setOptions((o) => ({ ...o, cancelTitle: e.detail.value ?? '' }))
+                }
+              />
+            </IonItem>
+          )}
+
+          {isIOS && (
+            <IonItem>
+              <IonInput
+                label="Fallback title:"
+                type="text"
+                value={options.iosFallbackTitle}
+                onIonChange={(e) =>
+                  setOptions((o) => ({ ...o, iosFallbackTitle: e.detail.value ?? '' }))
+                }
+              />
+            </IonItem>
+          )}
+        </IonList>
       </IonContent>
     </IonPage>
   );
