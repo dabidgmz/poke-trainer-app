@@ -17,7 +17,7 @@ import {
   IonButton,
   IonIcon
 } from '@ionic/react';
-import { search, filter, refresh } from 'ionicons/icons';
+import { search, filter, refresh, searchCircle } from 'ionicons/icons';
 import './Tab1.css';
 
 const pokemonTypes = [
@@ -130,20 +130,25 @@ const Pokedex: React.FC = () => {
                 placeholder="Buscar Pokémon..."
                 showClearButton="focus"
                 debounce={300}
+                searchIcon={searchCircle}
               />
             </div>
             <div className="filter-section">
-              <IonSelect
-                className="pokedex-select"
-                value={type}
-                onIonChange={e => setType(e.detail.value)}
-                placeholder="Filtrar por tipo"
-                interface="popover"
-              >
-                {pokemonTypes.map((t) => (
-                  <IonSelectOption key={t.value} value={t.value}>{t.label}</IonSelectOption>
-                ))}
-              </IonSelect>
+              <IonList>
+                <IonItem>
+                  <IonSelect
+                    value={type}
+                    onIonChange={e => setType(e.detail.value)}
+                    placeholder="Filtrar por tipo"
+                    interface="popover"
+                    aria-label="Tipo de Pokémon"
+                  >
+                    {pokemonTypes.map((t) => (
+                      <IonSelectOption key={t.value} value={t.value}>{t.label}</IonSelectOption>
+                    ))}
+                  </IonSelect>
+                </IonItem>
+              </IonList>
             </div>
           </div>
 

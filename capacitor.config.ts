@@ -14,8 +14,11 @@ const config: CapacitorConfig = {
       'android.permission.CAMERA',
       'android.permission.RECORD_AUDIO',
       'android.permission.WRITE_EXTERNAL_STORAGE',
-      'android.permission.READ_EXTERNAL_STORAGE'
-    ]
+      'android.permission.READ_EXTERNAL_STORAGE',
+      'android.permission.INTERNET',
+      'android.permission.ACCESS_NETWORK_STATE'
+    ],
+    allowMixedContent: true
   }
 };
 

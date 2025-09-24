@@ -34,6 +34,7 @@ import {
 } from 'ionicons/icons';
 import { Camera, CameraResultType, CameraSource, PermissionStatus } from '@capacitor/camera';
 import QRScanner from '../components/QRScanner';
+import { CameraUtils } from '../utils/cameraUtils';
 import './Tab4.css';
 
 interface CapturedPokemon {
@@ -142,61 +143,26 @@ const Tab4: React.FC = () => {
         console.log('Solicitando permisos de cámara automáticamente al cargar la app...');
         setIsRequestingPermissions(true);
         
-        // Para web: usar getUserMedia directamente para solicitar permisos
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          try {
-            console.log('Solicitando permisos de cámara en web...');
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            
-            // Si se obtiene el stream, los permisos fueron concedidos
-            setCameraPermission('granted');
-            console.log('Permisos de cámara concedidos en web');
-            
-            // Cerrar el stream inmediatamente ya que solo queríamos los permisos
-            stream.getTracks().forEach(track => track.stop());
-            
-            // Abrir QR Scanner automáticamente
-            setTimeout(() => {
-              setShowQRScanner(true);
-            }, 1000);
-            
-            return;
-          } catch (webError) {
-            console.log('Error solicitando permisos en web:', webError);
-            setCameraPermission('denied');
-          }
+        const result = await CameraUtils.requestCameraPermissions();
+        
+        if (result.granted) {
+          setCameraPermission('granted');
+          console.log('Permisos de cámara concedidos');
+          
+          // Abrir QR Scanner automáticamente después de un breve delay
+          setTimeout(() => {
+            setShowQRScanner(true);
+          }, 1000);
+        } else {
+          setCameraPermission('denied');
+          setCameraError(result.error || 'Error al solicitar permisos de cámara');
+          console.log('Error solicitando permisos:', result.error);
         }
         
-        // Para mobile/Android: usar Capacitor Camera
-        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-          try {
-            console.log('Solicitando permisos de cámara en Android...');
-            const permission = await Camera.requestPermissions();
-            
-            if (permission.camera === 'granted') {
-              setCameraPermission('granted');
-              console.log('Permisos de cámara concedidos en Android');
-              
-              // Abrir QR Scanner automáticamente
-              setTimeout(() => {
-                setShowQRScanner(true);
-              }, 1000);
-            } else if (permission.camera === 'denied') {
-              setCameraPermission('denied');
-              console.log('Permisos de cámara denegados en Android');
-            } else {
-              setCameraPermission('prompt');
-              console.log('Permisos de cámara pendientes en Android');
-            }
-          } catch (mobileError) {
-            console.log('Error solicitando permisos en Android:', mobileError);
-            setCameraPermission('denied');
-          }
-        }
-        
-      } catch (error) {
+      } catch (error: any) {
         console.log('Error general al solicitar permisos de cámara:', error);
         setCameraPermission('unknown');
+        setCameraError('Error inesperado al solicitar permisos de cámara');
       } finally {
         setIsRequestingPermissions(false);
       }
@@ -215,28 +181,24 @@ const Tab4: React.FC = () => {
       setCameraError(null);
       
       // Para Android, usar el plugin de Cámara de Capacitor
-      // Para web, usar getUserMedia como fallback
       if (window.Capacitor && window.Capacitor.isNativePlatform()) {
         // En Android, el plugin de Cámara maneja la captura
         setIsScanning(true);
       } else {
-        // En web, usar getUserMedia
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          throw new Error('Tu navegador no soporta acceso a la cámara');
-        }
-
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: 'environment',
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
+        // En web, usar las utilidades de cámara
+        try {
+          const stream = await CameraUtils.getVideoStream();
+          
+          if (videoRef.current && stream) {
+            videoRef.current.srcObject = stream;
+            streamRef.current = stream;
+            setIsScanning(true);
+          } else {
+            throw new Error('No se pudo obtener el stream de video');
           }
-        });
-        
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          streamRef.current = stream;
-          setIsScanning(true);
+        } catch (streamError: any) {
+          console.error('Error obteniendo stream de video:', streamError);
+          throw streamError;
         }
       }
     } catch (error: any) {
@@ -244,7 +206,13 @@ const Tab4: React.FC = () => {
       
       let errorMessage = 'No se pudo activar la cámara.';
       
-      if (error.message.includes('not found')) {
+      if (error.name === 'NotAllowedError') {
+        errorMessage = 'Permisos de cámara denegados. Por favor, permite el acceso a la cámara.';
+      } else if (error.name === 'NotFoundError') {
+        errorMessage = 'No se encontró ninguna cámara en tu dispositivo.';
+      } else if (error.name === 'NotReadableError') {
+        errorMessage = 'La cámara está siendo usada por otra aplicación.';
+      } else if (error.message.includes('not found')) {
         errorMessage = 'No se encontró ninguna cámara en tu dispositivo.';
       } else if (error.message.includes('not supported')) {
         errorMessage = 'Tu dispositivo no soporta acceso a la cámara.';
@@ -308,11 +276,20 @@ const Tab4: React.FC = () => {
   };
 
   const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+    try {
+      // Usar las utilidades para limpiar el stream
+      CameraUtils.cleanupVideoStream(streamRef.current);
       streamRef.current = null;
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+      
+      setIsScanning(false);
+    } catch (error) {
+      console.error('Error deteniendo cámara:', error);
+      setIsScanning(false);
     }
-    setIsScanning(false);
   };
 
   const toggleFlash = () => {

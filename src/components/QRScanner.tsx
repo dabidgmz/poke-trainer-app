@@ -73,11 +73,24 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
 
   const stopWeb = useCallback(async () => {
     try {
-      webControls.current?.stop();
-      webControls.current = null;
-      const stream = videoRef.current?.srcObject as MediaStream | null;
-      stream?.getTracks().forEach(t => t.stop());
-      if (videoRef.current) videoRef.current.srcObject = null;
+      // Detener el scanner de ZXing
+      if (webControls.current) {
+        webControls.current.stop();
+        webControls.current = null;
+      }
+      
+      // Detener y limpiar el stream de video
+      if (videoRef.current) {
+        const stream = videoRef.current.srcObject as MediaStream | null;
+        if (stream) {
+          stream.getTracks().forEach(track => {
+            track.stop();
+            log('Track detenido:', track.kind);
+          });
+        }
+        videoRef.current.srcObject = null;
+        videoRef.current.style.display = 'none';
+      }
     } catch (e) {
       log('stopWeb err', e);
     }
@@ -139,23 +152,73 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
     }
 
     try {
+      // Verificar si getUserMedia está disponible
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setErrorMsg('Tu navegador no soporta acceso a la cámara.');
+        return;
+      }
+
       // Pide permiso primero para que los device labels no vengan vacíos
-      const tmpStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-      tmpStream.getTracks().forEach(t => t.stop());
+      let tmpStream: MediaStream;
+      try {
+        tmpStream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }, 
+          audio: false 
+        });
+        tmpStream.getTracks().forEach(t => t.stop());
+      } catch (permError: any) {
+        log('Error de permisos:', permError);
+        if (permError.name === 'NotAllowedError') {
+          setErrorMsg('Permisos de cámara denegados. Por favor, permite el acceso a la cámara.');
+        } else if (permError.name === 'NotFoundError') {
+          setErrorMsg('No se encontró ninguna cámara en tu dispositivo.');
+        } else if (permError.name === 'NotReadableError') {
+          setErrorMsg('La cámara está siendo usada por otra aplicación.');
+        } else {
+          setErrorMsg('Error al acceder a la cámara: ' + permError.message);
+        }
+        return;
+      }
 
       const codeReader = new BrowserMultiFormatReader();
-      const devices = await BrowserMultiFormatReader.listVideoInputDevices();
-
+      let devices;
       
+      try {
+        devices = await BrowserMultiFormatReader.listVideoInputDevices();
+      } catch (deviceError) {
+        log('Error listando dispositivos:', deviceError);
+        setErrorMsg('Error al acceder a los dispositivos de cámara.');
+        return;
+      }
+
+      if (!devices || devices.length === 0) {
+        setErrorMsg('No se encontró ninguna cámara disponible.');
+        return;
+      }
+
+      // Buscar cámara trasera, si no existe usar la primera disponible
       let backCam = devices.find(d => /back|rear|environment/i.test(d.label));
-      if (!backCam && devices[0]) backCam = devices[0];
+      if (!backCam) {
+        backCam = devices[0];
+        log('Usando cámara frontal como fallback:', backCam.label);
+      }
 
       if (!backCam) {
         setErrorMsg('No se encontró cámara disponible en el navegador.');
         return;
       }
 
+      log('Usando cámara:', backCam.label, 'ID:', backCam.deviceId);
       setIsScanning(true);
+
+      // Configurar el video element
+      if (videoRef.current) {
+        videoRef.current.style.display = 'block';
+      }
 
       webControls.current = await codeReader.decodeFromVideoDevice(
         backCam.deviceId,
@@ -172,7 +235,19 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
       );
     } catch (e: any) {
       log('startWeb err', e);
-      setErrorMsg(e?.message ?? 'No se pudo iniciar la cámara en web.');
+      let errorMessage = 'No se pudo iniciar la cámara.';
+      
+      if (e.name === 'NotAllowedError') {
+        errorMessage = 'Permisos de cámara denegados. Por favor, permite el acceso a la cámara.';
+      } else if (e.name === 'NotFoundError') {
+        errorMessage = 'No se encontró ninguna cámara en tu dispositivo.';
+      } else if (e.name === 'NotReadableError') {
+        errorMessage = 'La cámara está siendo usada por otra aplicación.';
+      } else if (e.message) {
+        errorMessage = e.message;
+      }
+      
+      setErrorMsg(errorMessage);
       cleanup();
     }
   }, [cleanup, onQRDetected]);
