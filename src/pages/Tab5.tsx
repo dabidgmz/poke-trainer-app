@@ -35,8 +35,17 @@ const Tab5: React.FC = () => {
   const platform = Capacitor.getPlatform();
   const isIOS = platform === 'ios';
   const isAndroid = platform === 'android';
+  
 
-  // ---------- Computed ----------
+  const isActuallyNative = isNative || 
+    (typeof window !== 'undefined' && 
+     (window.Capacitor?.isNativePlatform?.() || 
+      (/android|ios/i.test(navigator.userAgent) && 
+       !window.location.href.includes('localhost') &&
+       !window.location.href.includes('127.0.0.1') &&
+       !window.location.href.includes('192.168.') &&
+       !window.location.href.includes('file://'))));
+
   const biometryName = useMemo(() => {
     if (biometry.biometryType === BiometryType.FACE_ID) return 'Face ID';
     if (biometry.biometryType === BiometryType.TOUCH_ID) return 'Touch ID';
@@ -44,7 +53,7 @@ const Tab5: React.FC = () => {
     return 'No biometry';
   }, [biometry]);
 
-  // ---------- Helpers ----------
+
   const updateBiometryInfo = (info: any) => setBiometry(info);
 
   const showAlert = async (message: string) => {
@@ -71,14 +80,32 @@ const Tab5: React.FC = () => {
         });
         
         // Verificar permisos biométricos
-        if (isNative) {
+        if (isActuallyNative) {
           console.log('[Biometric] Verificando permisos en plataforma nativa...');
         }
         
-        // Intentar siempre, independientemente de la plataforma
-        const result = await NativeBiometric.isAvailable();
-        console.log('[Biometric] isAvailable result:', result);
-        updateBiometryInfo(result);
+        // Solo intentar en plataforma nativa real
+        if (isActuallyNative) {
+          try {
+            const result = await NativeBiometric.isAvailable();
+            console.log('[Biometric] isAvailable result:', result);
+            updateBiometryInfo(result);
+          } catch (error) {
+            console.error('[Biometric] Error checking biometry:', error);
+            updateBiometryInfo({
+              isAvailable: false,
+              biometryType: BiometryType.NONE,
+              reason: `Error: ${error} - Método no implementado en esta plataforma`
+            });
+          }
+        } else {
+          console.log('[Biometric] Ejecutándose en web/PWA, biometría no disponible');
+          updateBiometryInfo({
+            isAvailable: false,
+            biometryType: BiometryType.NONE,
+            reason: 'Solo disponible en app nativa (Android/iOS)'
+          });
+        }
       } catch (e) {
         console.error('[Biometric] Error checking biometry:', (e as Error).message);
         setMessage(`Error: ${(e as Error).message}`);
@@ -89,13 +116,29 @@ const Tab5: React.FC = () => {
         /* no-op */
       }
     })();
-  }, [isNative]);
+  }, [isActuallyNative]);
 
   // ---------- Handlers ----------
   const checkPermissions = async () => {
     try {
       console.log('[Biometric] Verificando permisos...');
       setPermissionStatus('Verificando...');
+      
+      if (!isActuallyNative) {
+        setPermissionStatus('Solo disponible en app nativa');
+        setMessage('La biometría solo funciona en la app nativa (Android/iOS), no en web/PWA');
+        updateBiometryInfo({
+          isAvailable: false,
+          biometryType: BiometryType.NONE,
+          reason: 'Solo disponible en app nativa (Android/iOS)'
+        });
+        return;
+      }
+      
+      // Verificar si el plugin está disponible
+      if (!NativeBiometric || typeof NativeBiometric.isAvailable !== 'function') {
+        throw new Error('Plugin NativeBiometric no está disponible');
+      }
       
       const result = await NativeBiometric.isAvailable();
       console.log('[Biometric] isAvailable result:', result);
@@ -111,6 +154,12 @@ const Tab5: React.FC = () => {
       console.error('[Biometric] Error verificando permisos:', error);
       setPermissionStatus(`Error: ${error}`);
       setMessage(`Error verificando permisos: ${error}`);
+      
+      updateBiometryInfo({
+        isAvailable: false,
+        biometryType: BiometryType.NONE,
+        reason: `Plugin no disponible: ${error}`
+      });
     }
   };
 
@@ -119,7 +168,7 @@ const Tab5: React.FC = () => {
       console.log('[Biometric] onAuthenticate: iniciando...');
       console.log('[Biometric] biometry.isAvailable:', biometry.isAvailable);
       console.log('[Biometric] biometry.biometryType:', biometry.biometryType);
-      console.log('[Biometric] Platform info:', { isNative, platform });
+      console.log('[Biometric] Platform info:', { isNative, isActuallyNative, platform });
       
       if (!biometry.isAvailable) {
         console.warn('[Biometric] Biometría no disponible');
@@ -172,11 +221,12 @@ const Tab5: React.FC = () => {
 
         <IonList lines="full">
           <IonItem>
-                    <IonLabel>
+            <IonLabel>
               <h3>Plataforma</h3>
-              <p>{platform} - {isNative ? 'Nativa' : 'Web'}</p>
-                    </IonLabel>
-                  </IonItem>
+              <p>{platform} - {isActuallyNative ? 'Nativa' : 'Web'}</p>
+              <p>Detección: {isNative ? 'Capacitor' : 'Manual'}</p>
+            </IonLabel>
+          </IonItem>
                   
           <IonItem>
                     <IonLabel>
