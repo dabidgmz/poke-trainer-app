@@ -10,7 +10,7 @@ import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { fingerPrint } from 'ionicons/icons';
 
-import { NativeBiometric, BiometryType } from 'capacitor-native-biometric';
+import { NativeBiometric, BiometryType } from '@capgo/capacitor-native-biometric';
 
 type BiometryTypeEntry = { title: string; type: number };
 
@@ -29,6 +29,7 @@ const Tab5: React.FC = () => {
   });
 
   const [message, setMessage] = useState('');
+  const [permissionStatus, setPermissionStatus] = useState('No verificado');
 
   const isNative = Capacitor.isNativePlatform();
   const platform = Capacitor.getPlatform();
@@ -63,15 +64,24 @@ const Tab5: React.FC = () => {
   useEffect(() => {
     (async () => {
       try {
-        if (!isNative) {
-          console.warn('[Biometric] Plataforma web/PWA, plugin no disponible');
-          return;
+        console.log('[Biometric] Platform check:', {
+          isNative,
+          platform,
+          userAgent: navigator.userAgent
+        });
+        
+        // Verificar permisos biométricos
+        if (isNative) {
+          console.log('[Biometric] Verificando permisos en plataforma nativa...');
         }
+        
+        // Intentar siempre, independientemente de la plataforma
         const result = await NativeBiometric.isAvailable();
         console.log('[Biometric] isAvailable result:', result);
         updateBiometryInfo(result);
       } catch (e) {
-        console.error((e as Error).message);
+        console.error('[Biometric] Error checking biometry:', (e as Error).message);
+        setMessage(`Error: ${(e as Error).message}`);
       }
       try {
         await SplashScreen.hide();
@@ -82,17 +92,34 @@ const Tab5: React.FC = () => {
   }, [isNative]);
 
   // ---------- Handlers ----------
+  const checkPermissions = async () => {
+    try {
+      console.log('[Biometric] Verificando permisos...');
+      setPermissionStatus('Verificando...');
+      
+      const result = await NativeBiometric.isAvailable();
+      console.log('[Biometric] isAvailable result:', result);
+      
+      if (result.isAvailable) {
+        setPermissionStatus('Permisos concedidos');
+        updateBiometryInfo(result);
+      } else {
+        setPermissionStatus('No disponible');
+        setMessage('Biometría no disponible en este dispositivo');
+      }
+    } catch (error) {
+      console.error('[Biometric] Error verificando permisos:', error);
+      setPermissionStatus(`Error: ${error}`);
+      setMessage(`Error verificando permisos: ${error}`);
+    }
+  };
+
   const onAuthenticate = async () => {
     try {
       console.log('[Biometric] onAuthenticate: iniciando...');
       console.log('[Biometric] biometry.isAvailable:', biometry.isAvailable);
       console.log('[Biometric] biometry.biometryType:', biometry.biometryType);
-      
-      if (!isNative) {
-        console.warn('[Biometric] Solo disponible en app nativa');
-        setMessage('Solo disponible en app nativa');
-        return;
-      }
+      console.log('[Biometric] Platform info:', { isNative, platform });
       
       if (!biometry.isAvailable) {
         console.warn('[Biometric] Biometría no disponible');
@@ -145,29 +172,46 @@ const Tab5: React.FC = () => {
 
         <IonList lines="full">
           <IonItem>
-            <IonLabel>
+                    <IonLabel>
+              <h3>Plataforma</h3>
+              <p>{platform} - {isNative ? 'Nativa' : 'Web'}</p>
+                    </IonLabel>
+                  </IonItem>
+                  
+          <IonItem>
+                    <IonLabel>
+              <h3>Estado de Permisos</h3>
+              <p>{permissionStatus}</p>
+                    </IonLabel>
+            <IonButton slot="end" fill="outline" onClick={checkPermissions}>
+              Verificar
+            </IonButton>
+                  </IonItem>
+                  
+          <IonItem>
+                    <IonLabel>
               <h3>Biometría Disponible</h3>
               <p>{biometry.isAvailable ? biometryName : 'No disponible'}</p>
-            </IonLabel>
+                    </IonLabel>
             <IonText slot="end">
               {biometry.isAvailable ? 'Sí' : 'No'}
             </IonText>
-          </IonItem>
-
+                  </IonItem>
+                  
           <IonItem>
-            <IonLabel>
+                    <IonLabel>
               <h3>Razón</h3>
               <p>{biometry.reason || 'N/A'}</p>
-            </IonLabel>
-          </IonItem>
-
+                    </IonLabel>
+                  </IonItem>
+                  
           {message && (
             <IonItem>
-              <IonLabel>
+                    <IonLabel>
                 <h3>Estado</h3>
                 <p>{message}</p>
-              </IonLabel>
-            </IonItem>
+                    </IonLabel>
+                  </IonItem>
           )}
         </IonList>
       </IonContent>
