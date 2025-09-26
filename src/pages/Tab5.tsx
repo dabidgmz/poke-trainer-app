@@ -71,6 +71,10 @@ const Tab5: React.FC = () => {
   };
 
   // Generar challenge aleatorio para WebAuthn
+  // The challenge is a crucial part of the authentication process, 
+  // and is used to mitigate "replay attacks" and allow server-side authentication
+  // in a real app, you'll want to generate the challenge server-side and 
+  // maintain a session or temporary record of this challenge in your DB
   const generateRandomChallenge = (): ArrayBuffer => {
     const length = 32;
     const randomValues = new Uint8Array(length);
@@ -96,66 +100,37 @@ const Tab5: React.FC = () => {
   const createPasskey = async (): Promise<boolean> => {
     try {
       if (!navigator.credentials || !navigator.credentials.create || !navigator.credentials.get) {
-        throw new Error('Tu navegador no soporta la API de Autenticación Web');
+        alert("Your browser does not support the Web Authentication API");
+        return false;
       }
-
-      // Verificar que estamos en HTTPS o localhost
-      if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-        throw new Error('WebAuthn requiere HTTPS. Usa la app nativa o accede desde https://pokeapptrainer.web.app/');
-      }
-
-      // Verificar disponibilidad de autenticadores
-      const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-      if (!available) {
-        throw new Error('No hay autenticadores biométricos disponibles en este dispositivo');
-      }
-
+      
       const credentials = await navigator.credentials.create({
         publicKey: {
           challenge: generateRandomChallenge(),
-          rp: { 
-            name: "Pokémon Trainer", 
-            id: window.location.hostname 
-          },
-          user: { 
-            id: new Uint8Array(16), 
-            name: "trainer@pokemon.com", 
-            displayName: "Pokémon Trainer"
-          },
+          rp: { name: "Pokémon Trainer", id: window.location.hostname },
+          // here you'll want to pass the user's info
+          user: { id: new Uint8Array(16), name: "trainer@pokemon.com", displayName: "Pokémon Trainer"},
           pubKeyCredParams: [
             { type: "public-key", alg: -7 },
             { type: "public-key", alg: -257 }
           ],
-          timeout: 30000, // Reducido de 60s a 30s
-          authenticatorSelection: {
-            residentKey: "discouraged", // Cambiado de "preferred" a "discouraged"
-            requireResidentKey: false, 
-            userVerification: "required" // Cambiado de "preferred" a "required"
-          },
-          attestation: "none"
+          timeout: 60000,
+          authenticatorSelection: {residentKey: "preferred", requireResidentKey: false, userVerification: "preferred"},
+          attestation: "none",
+          extensions: { credProps: true }
         }
       });
-
+      
+      // in a real app, you'll store the credentials against the user's profile in your DB
+      // here we'll just save it in a global variable
       setCurrentPasskey(credentials);
       setPasskeyCreated(true);
       setMessage('Passkey creado exitosamente');
+      console.log(credentials);
       return true;
     } catch (error: any) {
       console.error('Error creando passkey:', error);
-      
-      // Mensajes de error más específicos
-      let errorMessage = error.message;
-      if (error.name === 'NotAllowedError') {
-        errorMessage = 'Operación cancelada o no permitida. Asegúrate de usar HTTPS y tener biometría configurada.';
-      } else if (error.name === 'NotSupportedError') {
-        errorMessage = 'WebAuthn no soportado en este navegador o dispositivo.';
-      } else if (error.name === 'SecurityError') {
-        errorMessage = 'Error de seguridad. Usa HTTPS o la app nativa.';
-      } else if (error.name === 'TimeoutError') {
-        errorMessage = 'Tiempo agotado. Intenta nuevamente.';
-      }
-      
-      setMessage(`Error creando passkey: ${errorMessage}`);
+      setMessage(`Error creando passkey: ${error.message}`);
       return false;
     }
   };
@@ -163,45 +138,22 @@ const Tab5: React.FC = () => {
   // Verificar Passkey con WebAuthn
   const verifyPasskey = async (): Promise<boolean> => {
     try {
-      if (!currentPasskey) {
-        throw new Error('No hay passkey creado');
-      }
-
-      // Verificar que estamos en HTTPS o localhost
-      if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-        throw new Error('WebAuthn requiere HTTPS. Usa la app nativa o accede desde https://pokeapptrainer.web.app/');
-      }
-
+      // to verify a user's credentials, we simply pass the 
+      // unique ID of the passkey we saved against the user profile
+      // in this demo, we just saved it in a global variable
       const credentials = await navigator.credentials.get({
         publicKey: {
           challenge: generateRandomChallenge(),
-          allowCredentials: [{ 
-            type: "public-key", 
-            id: currentPasskey.rawId 
-          }],
-          timeout: 30000,
-          userVerification: "required"
+          allowCredentials: [{ type: "public-key", id: currentPasskey.rawId }]
         }
       });
-
+      
+      console.log(credentials);
       setMessage('Autenticación biométrica exitosa con WebAuthn!');
       return true;
     } catch (error: any) {
       console.error('Error verificando passkey:', error);
-      
-      // Mensajes de error más específicos
-      let errorMessage = error.message;
-      if (error.name === 'NotAllowedError') {
-        errorMessage = 'Autenticación cancelada o no permitida.';
-      } else if (error.name === 'NotSupportedError') {
-        errorMessage = 'WebAuthn no soportado en este navegador.';
-      } else if (error.name === 'SecurityError') {
-        errorMessage = 'Error de seguridad. Usa HTTPS.';
-      } else if (error.name === 'TimeoutError') {
-        errorMessage = 'Tiempo agotado. Intenta nuevamente.';
-      }
-      
-      setMessage(`Error en autenticación: ${errorMessage}`);
+      setMessage(`Error en autenticación: ${error.message}`);
       return false;
     }
   };
@@ -219,39 +171,24 @@ const Tab5: React.FC = () => {
 
       // Si es PWA, mostrar mensaje específico
       if (isPWA) {
-        const hasWebAuthn = await checkWebAuthnSupport();
-        const isHTTPS = location.protocol === 'https:';
-        
         setBiometry({
           isAvailable: false,
           biometryType: BiometryType.NONE,
-          reason: `PWA - ${isHTTPS ? 'WebAuthn disponible' : 'Requiere HTTPS'}`
+          reason: 'PWA - WebAuthn disponible'
         });
-        
-        if (!isHTTPS) {
-          setMessage('WebAuthn requiere HTTPS. Accede desde https://pokeapptrainer.web.app/');
-        } else if (hasWebAuthn) {
-          setMessage('WebAuthn disponible. Puedes crear un passkey para autenticación biométrica.');
-        } else {
-          setMessage('WebAuthn no disponible en este dispositivo. Usa la app nativa.');
-        }
-        
-        setPermissionStatus(`PWA - ${isHTTPS ? 'HTTPS OK' : 'Requiere HTTPS'}`);
+        setMessage('WebAuthn disponible. Puedes crear un passkey para autenticación biométrica.');
+        setPermissionStatus('PWA - WebAuthn');
         return;
       }
 
       // Si no es nativo (navegador web normal)
       if (!isNative) {
-        const hasWebAuthn = await checkWebAuthnSupport();
         setBiometry({
           isAvailable: false,
           biometryType: BiometryType.NONE,
-          reason: 'Navegador web - Solo disponible en app nativa'
+          reason: 'Navegador web - WebAuthn disponible'
         });
-        setMessage(hasWebAuthn ? 
-          'WebAuthn disponible (configuración requerida)' : 
-          'Funcionalidad limitada en navegador'
-        );
+        setMessage('WebAuthn disponible. Puedes crear un passkey para autenticación biométrica.');
         setPermissionStatus('Navegador Web');
         return;
       }
