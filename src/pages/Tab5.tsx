@@ -8,7 +8,7 @@ import {
 import { alertController } from '@ionic/core';
 import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from '@capacitor/splash-screen';
-import { fingerPrint, download, phonePortrait, warning } from 'ionicons/icons';
+import { fingerPrint, phonePortrait, warning } from 'ionicons/icons';
 
 import { NativeBiometric, BiometryType } from '@capgo/capacitor-native-biometric';
 
@@ -311,26 +311,6 @@ const Tab5: React.FC = () => {
     initialize();
   }, [checkBiometricAvailability]);
 
-  // Información de descarga para nativa
-  const getDownloadInfo = () => {
-    if (platform === 'ios') {
-      return {
-        message: 'Descarga desde App Store',
-        instructions: 'Busca la app en App Store para obtener todas las funciones biométricas'
-      };
-    } else if (platform === 'android') {
-      return {
-        message: 'Descarga desde Play Store', 
-        instructions: 'Instala la app desde Play Store para habilitar el sensor de huellas'
-      };
-    }
-    return {
-      message: 'Descarga la app nativa',
-      instructions: 'Disponible en App Store y Play Store'
-    };
-  };
-
-  const downloadInfo = getDownloadInfo();
 
   return (
     <IonPage className="w-full h-full">
@@ -358,11 +338,7 @@ const Tab5: React.FC = () => {
           isOpen={showPWAAlert}
           onDidDismiss={() => setShowPWAAlert(false)}
           header="Biometría No Disponible en PWA"
-          message={`
-            <p>La autenticación biométrica completa solo está disponible en la aplicación nativa.</p>
-            <p><strong>${downloadInfo.message}</strong></p>
-            <p>${downloadInfo.instructions}</p>
-          `}
+          message="La autenticación biométrica completa solo está disponible en la aplicación nativa. Usa WebAuthn como alternativa."
           buttons={[
             {
               text: 'Entendido',
@@ -390,7 +366,7 @@ const Tab5: React.FC = () => {
                   <ul className="list-disc list-inside mt-2 space-y-1">
                     <li>La biometría nativa no está disponible</li>
                     <li>WebAuthn permite autenticación biométrica en navegador</li>
-                    <li>Para experiencia completa, descarga la app nativa</li>
+                    <li>Usa el botón de abajo para crear o verificar tu passkey</li>
                   </ul>
                 </div>
               </div>
@@ -522,22 +498,6 @@ const Tab5: React.FC = () => {
             )}
                     </IonButton>
 
-          {/* Enlace de descarga para no-nativos */}
-          {!isNative && (
-                    <IonButton 
-              expand="block" 
-                      fill="outline"
-              href={platform === 'ios' ? 
-                'https://apps.apple.com' : 
-                'https://play.google.com'
-              }
-              target="_blank"
-              className="ion-margin-top"
-            >
-              <IonIcon icon={download} slot="start" />
-              Descargar App Nativa
-                    </IonButton>
-              )}
         </div>
       </IonContent>
     </IonPage>

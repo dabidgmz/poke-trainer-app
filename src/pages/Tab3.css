@@ -846,3 +846,304 @@
     cursor: grab;
   }
 }
+
+/* Estilos para el botón de acceso biométrico */
+.biometric-access-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  padding: 20px;
+}
+
+.biometric-access-card {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%);
+  border-radius: 25px;
+  padding: 40px;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  border: 6px solid #fef2f2;
+  position: relative;
+  overflow: hidden;
+  max-width: 400px;
+  width: 100%;
+  animation: biometricCardPulse 3s ease-in-out infinite;
+}
+
+@keyframes biometricCardPulse {
+  0%, 100% { 
+    transform: scale(1);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  }
+  50% { 
+    transform: scale(1.02);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+  }
+}
+
+.biometric-access-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: linear-gradient(90deg, #fef2f2, #fecaca, #fef2f2);
+  animation: scanLine 4s linear infinite;
+}
+
+.biometric-access-card::after {
+  content: '';
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 12px;
+  height: 12px;
+  background: #10b981;
+  border-radius: 50%;
+  box-shadow: 0 0 12px #10b981;
+  animation: pulse 2s infinite;
+}
+
+.biometric-icon {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 80px;
+  height: 80px;
+  background: #fef2f2;
+  border-radius: 50%;
+  margin: 0 auto 20px;
+  border: 4px solid #fecaca;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.biometric-icon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.1), transparent);
+  animation: scanLine 3s linear infinite;
+}
+
+.biometric-icon ion-icon {
+  font-size: 2.5rem;
+  color: #dc2626;
+  z-index: 1;
+  position: relative;
+  animation: iconPulse 2s ease-in-out infinite;
+}
+
+@keyframes iconPulse {
+  0%, 100% { 
+    transform: scale(1);
+    color: #dc2626;
+  }
+  50% { 
+    transform: scale(1.1);
+    color: #ef4444;
+  }
+}
+
+.biometric-title {
+  color: #fef2f2;
+  font-size: 1.8rem;
+  font-weight: 900;
+  margin: 0 0 15px 0;
+  text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+  letter-spacing: 3px;
+  font-family: 'Courier New', monospace;
+  text-transform: uppercase;
+  animation: titleGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes titleGlow {
+  from { 
+    text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5), 0 0 10px rgba(254, 242, 242, 0.3);
+  }
+  to { 
+    text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5), 0 0 20px rgba(254, 242, 242, 0.6);
+  }
+}
+
+.biometric-description {
+  color: #fecaca;
+  font-size: 1rem;
+  margin: 0 0 30px 0;
+  line-height: 1.5;
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+}
+
+.biometric-button {
+  --background: #fef2f2;
+  --color: #dc2626;
+  --border-radius: 20px;
+  --padding-start: 30px;
+  --padding-end: 30px;
+  --padding-top: 15px;
+  --padding-bottom: 15px;
+  font-size: 1.1rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-family: 'Courier New', monospace;
+  border: 4px solid #fecaca;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  min-height: 60px;
+}
+
+.biometric-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.2), transparent);
+  transition: left 0.6s ease;
+}
+
+.biometric-button:hover::before {
+  left: 100%;
+}
+
+.biometric-button:hover {
+  --background: #dc2626;
+  --color: #fef2f2;
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+  border-color: #fef2f2;
+}
+
+.biometric-button:active {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.biometric-button:disabled {
+  --background: #9ca3af;
+  --color: #6b7280;
+  border-color: #9ca3af;
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.biometric-button:disabled:hover {
+  transform: none;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.biometric-button ion-icon {
+  font-size: 1.5rem;
+  margin-right: 10px;
+}
+
+/* Responsive para el botón biométrico */
+@media (max-width: 768px) {
+  .biometric-access-container {
+    min-height: 50vh;
+    padding: 15px;
+  }
+  
+  .biometric-access-card {
+    padding: 30px 25px;
+    max-width: 350px;
+  }
+  
+  .biometric-icon {
+    width: 70px;
+    height: 70px;
+    margin-bottom: 15px;
+  }
+  
+  .biometric-icon ion-icon {
+    font-size: 2rem;
+  }
+  
+  .biometric-title {
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+  
+  .biometric-description {
+    font-size: 0.9rem;
+    margin-bottom: 25px;
+  }
+  
+  .biometric-button {
+    font-size: 1rem;
+    letter-spacing: 1px;
+    --padding-start: 25px;
+    --padding-end: 25px;
+    --padding-top: 12px;
+    --padding-bottom: 12px;
+    min-height: 50px;
+  }
+  
+  .biometric-button ion-icon {
+    font-size: 1.3rem;
+    margin-right: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .biometric-access-container {
+    min-height: 40vh;
+    padding: 10px;
+  }
+  
+  .biometric-access-card {
+    padding: 25px 20px;
+    max-width: 300px;
+    border-radius: 20px;
+  }
+  
+  .biometric-icon {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 12px;
+  }
+  
+  .biometric-icon ion-icon {
+    font-size: 1.8rem;
+  }
+  
+  .biometric-title {
+    font-size: 1.3rem;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+  }
+  
+  .biometric-description {
+    font-size: 0.8rem;
+    margin-bottom: 20px;
+  }
+  
+  .biometric-button {
+    font-size: 0.9rem;
+    letter-spacing: 0.5px;
+    --padding-start: 20px;
+    --padding-end: 20px;
+    --padding-top: 10px;
+    --padding-bottom: 10px;
+    min-height: 45px;
+  }
+  
+  .biometric-button ion-icon {
+    font-size: 1.2rem;
+    margin-right: 6px;
+  }
+}
