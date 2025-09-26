@@ -32,6 +32,8 @@ const Tab5: React.FC = () => {
   const [permissionStatus, setPermissionStatus] = useState('No verificado');
   const [isLoading, setIsLoading] = useState(false);
   const [showPWAAlert, setShowPWAAlert] = useState(false);
+  const [passkeyCreated, setPasskeyCreated] = useState(false);
+  const [currentPasskey, setCurrentPasskey] = useState<any>(null);
 
   const isNative = Capacitor.isNativePlatform();
   const platform = Capacitor.getPlatform();
@@ -68,6 +70,14 @@ const Tab5: React.FC = () => {
     await showAlert(`${error.message || error} [${error.code || 'unknown'}].`);
   };
 
+  // Generar challenge aleatorio para WebAuthn
+  const generateRandomChallenge = (): ArrayBuffer => {
+    const length = 32;
+    const randomValues = new Uint8Array(length);
+    window.crypto.getRandomValues(randomValues);
+    return randomValues.buffer;
+  };
+
   // Verificar disponibilidad de WebAuthn para PWA
   const checkWebAuthnSupport = async (): Promise<boolean> => {
     if (!window.PublicKeyCredential) {
@@ -78,6 +88,120 @@ const Tab5: React.FC = () => {
       return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
     } catch (error) {
       console.log('WebAuthn no disponible:', error);
+      return false;
+    }
+  };
+
+  // Crear Passkey con WebAuthn
+  const createPasskey = async (): Promise<boolean> => {
+    try {
+      if (!navigator.credentials || !navigator.credentials.create || !navigator.credentials.get) {
+        throw new Error('Tu navegador no soporta la API de Autenticación Web');
+      }
+
+      // Verificar que estamos en HTTPS o localhost
+      if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+        throw new Error('WebAuthn requiere HTTPS. Usa la app nativa o accede desde https://pokeapptrainer.web.app/');
+      }
+
+      // Verificar disponibilidad de autenticadores
+      const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      if (!available) {
+        throw new Error('No hay autenticadores biométricos disponibles en este dispositivo');
+      }
+
+      const credentials = await navigator.credentials.create({
+        publicKey: {
+          challenge: generateRandomChallenge(),
+          rp: { 
+            name: "Pokémon Trainer", 
+            id: window.location.hostname 
+          },
+          user: { 
+            id: new Uint8Array(16), 
+            name: "trainer@pokemon.com", 
+            displayName: "Pokémon Trainer"
+          },
+          pubKeyCredParams: [
+            { type: "public-key", alg: -7 },
+            { type: "public-key", alg: -257 }
+          ],
+          timeout: 30000, // Reducido de 60s a 30s
+          authenticatorSelection: {
+            residentKey: "discouraged", // Cambiado de "preferred" a "discouraged"
+            requireResidentKey: false, 
+            userVerification: "required" // Cambiado de "preferred" a "required"
+          },
+          attestation: "none"
+        }
+      });
+
+      setCurrentPasskey(credentials);
+      setPasskeyCreated(true);
+      setMessage('Passkey creado exitosamente');
+      return true;
+    } catch (error: any) {
+      console.error('Error creando passkey:', error);
+      
+      // Mensajes de error más específicos
+      let errorMessage = error.message;
+      if (error.name === 'NotAllowedError') {
+        errorMessage = 'Operación cancelada o no permitida. Asegúrate de usar HTTPS y tener biometría configurada.';
+      } else if (error.name === 'NotSupportedError') {
+        errorMessage = 'WebAuthn no soportado en este navegador o dispositivo.';
+      } else if (error.name === 'SecurityError') {
+        errorMessage = 'Error de seguridad. Usa HTTPS o la app nativa.';
+      } else if (error.name === 'TimeoutError') {
+        errorMessage = 'Tiempo agotado. Intenta nuevamente.';
+      }
+      
+      setMessage(`Error creando passkey: ${errorMessage}`);
+      return false;
+    }
+  };
+
+  // Verificar Passkey con WebAuthn
+  const verifyPasskey = async (): Promise<boolean> => {
+    try {
+      if (!currentPasskey) {
+        throw new Error('No hay passkey creado');
+      }
+
+      // Verificar que estamos en HTTPS o localhost
+      if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+        throw new Error('WebAuthn requiere HTTPS. Usa la app nativa o accede desde https://pokeapptrainer.web.app/');
+      }
+
+      const credentials = await navigator.credentials.get({
+        publicKey: {
+          challenge: generateRandomChallenge(),
+          allowCredentials: [{ 
+            type: "public-key", 
+            id: currentPasskey.rawId 
+          }],
+          timeout: 30000,
+          userVerification: "required"
+        }
+      });
+
+      setMessage('Autenticación biométrica exitosa con WebAuthn!');
+      return true;
+    } catch (error: any) {
+      console.error('Error verificando passkey:', error);
+      
+      // Mensajes de error más específicos
+      let errorMessage = error.message;
+      if (error.name === 'NotAllowedError') {
+        errorMessage = 'Autenticación cancelada o no permitida.';
+      } else if (error.name === 'NotSupportedError') {
+        errorMessage = 'WebAuthn no soportado en este navegador.';
+      } else if (error.name === 'SecurityError') {
+        errorMessage = 'Error de seguridad. Usa HTTPS.';
+      } else if (error.name === 'TimeoutError') {
+        errorMessage = 'Tiempo agotado. Intenta nuevamente.';
+      }
+      
+      setMessage(`Error en autenticación: ${errorMessage}`);
       return false;
     }
   };
@@ -96,16 +220,23 @@ const Tab5: React.FC = () => {
       // Si es PWA, mostrar mensaje específico
       if (isPWA) {
         const hasWebAuthn = await checkWebAuthnSupport();
+        const isHTTPS = location.protocol === 'https:';
+        
         setBiometry({
           isAvailable: false,
           biometryType: BiometryType.NONE,
-          reason: 'PWA - La biometría nativa no está disponible'
+          reason: `PWA - ${isHTTPS ? 'WebAuthn disponible' : 'Requiere HTTPS'}`
         });
-        setMessage(hasWebAuthn ? 
-          'Tu navegador soporta WebAuthn (alternativa para PWA)' : 
-          'Descarga la app nativa para usar biometría'
-        );
-        setPermissionStatus('PWA - Limitado');
+        
+        if (!isHTTPS) {
+          setMessage('WebAuthn requiere HTTPS. Accede desde https://pokeapptrainer.web.app/');
+        } else if (hasWebAuthn) {
+          setMessage('WebAuthn disponible. Puedes crear un passkey para autenticación biométrica.');
+        } else {
+          setMessage('WebAuthn no disponible en este dispositivo. Usa la app nativa.');
+        }
+        
+        setPermissionStatus(`PWA - ${isHTTPS ? 'HTTPS OK' : 'Requiere HTTPS'}`);
         return;
       }
 
@@ -166,9 +297,25 @@ const Tab5: React.FC = () => {
 
   // Autenticación biométrica
   const onAuthenticate = async () => {
-    // Si es PWA, mostrar alerta de descarga
+    // Si es PWA/Web, usar WebAuthn
     if (isPWA || !isNative) {
-      setShowPWAAlert(true);
+      if (!passkeyCreated) {
+        // Crear passkey primero
+        setIsLoading(true);
+        const created = await createPasskey();
+        setIsLoading(false);
+        if (created) {
+          await showAlert('Passkey creado. Ahora puedes autenticarte.');
+        }
+      } else {
+        // Verificar passkey
+        setIsLoading(true);
+        const verified = await verifyPasskey();
+        setIsLoading(false);
+        if (verified) {
+          await showAlert('Autenticación exitosa con WebAuthn!');
+        }
+      }
       return;
     }
 
@@ -289,16 +436,23 @@ const Tab5: React.FC = () => {
 
         {/* Tarjeta informativa para PWA/Web */}
         {(isPWA || !isNative) && (
-          <IonCard color="warning">
+          <IonCard color={passkeyCreated ? "success" : "warning"}>
             <IonCardContent>
               <div className="flex items-start">
                 <IonIcon icon={warning} className="text-2xl mr-3 mt-1" />
                 <div>
-                  <h2 className="font-bold text-lg">Versión PWA/Navegador</h2>
-                  <p className="mt-2">Funcionalidad limitada detectada:</p>
+                  <h2 className="font-bold text-lg">
+                    {passkeyCreated ? 'WebAuthn Configurado' : 'Versión PWA/Navegador'}
+                  </h2>
+                  <p className="mt-2">
+                    {passkeyCreated 
+                      ? 'Passkey creado exitosamente. Puedes autenticarte con biometría web.'
+                      : 'Usa WebAuthn como alternativa a la biometría nativa:'
+                    }
+                  </p>
                   <ul className="list-disc list-inside mt-2 space-y-1">
                     <li>La biometría nativa no está disponible</li>
-                    <li>Algunas funciones están deshabilitadas</li>
+                    <li>WebAuthn permite autenticación biométrica en navegador</li>
                     <li>Para experiencia completa, descarga la app nativa</li>
                   </ul>
                 </div>
@@ -351,10 +505,22 @@ const Tab5: React.FC = () => {
           <IonItem>
                     <IonLabel>
               <h3>Biometría Disponible</h3>
-              <p>{biometry.isAvailable ? biometryName : 'No disponible'}</p>
+              <p>
+                {isNative 
+                  ? (biometry.isAvailable ? biometryName : 'No disponible')
+                  : (passkeyCreated ? 'WebAuthn configurado' : 'WebAuthn disponible')
+                }
+              </p>
                     </IonLabel>
-            <IonText slot="end" color={biometry.isAvailable ? "success" : "danger"}>
-              {biometry.isAvailable ? 'Sí' : 'No'}
+            <IonText slot="end" color={
+              isNative 
+                ? (biometry.isAvailable ? "success" : "danger")
+                : (passkeyCreated ? "success" : "warning")
+            }>
+              {isNative 
+                ? (biometry.isAvailable ? 'Sí' : 'No')
+                : (passkeyCreated ? 'Configurado' : 'Disponible')
+              }
             </IonText>
                   </IonItem>
                   
@@ -406,12 +572,15 @@ const Tab5: React.FC = () => {
             {isLoading ? (
               <>
                 <IonSpinner slot="start" />
-                Autenticando...
+                {isNative ? 'Autenticando...' : (passkeyCreated ? 'Verificando...' : 'Creando...')}
               </>
             ) : (
               <>
                 <IonIcon icon={fingerPrint} slot="start" />
-                {isNative ? 'Autenticar con Biometría' : 'Descargar App Nativa'}
+                {isNative 
+                  ? 'Autenticar con Biometría' 
+                  : (passkeyCreated ? 'Autenticar con WebAuthn' : 'Crear Passkey')
+                }
               </>
             )}
                     </IonButton>
