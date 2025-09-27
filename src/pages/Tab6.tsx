@@ -19,14 +19,88 @@ import {
 import { Torch } from '@capawesome/capacitor-torch';
 import './Tab6.css';
 
+// Hook personalizado para la linterna usando getUserMedia (basado en Vue)
+const useFlashlight = () => {
+  const [toggled, setToggled] = useState(false);
+  const [disabled, setDisabled] = useState(false);
+  const [track, setTrack] = useState<MediaStreamTrack | null>(null);
+
+  const toggleAsync = async () => {
+    if (toggled) {
+      await stopAsync();
+    } else {
+      await startAsync();
+    }
+  };
+
+  const startAsync = async () => {
+    try {
+      if (!('mediaDevices' in navigator)) {
+        throw new Error('Dispositivo no soportado');
+      }
+
+      setDisabled(true);
+
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cameras = devices.filter((device) => device.kind === 'videoinput');
+      
+      if (cameras.length === 0) {
+        throw new Error('Cámara no encontrada');
+      }
+
+      // Usar la cámara trasera (última en la lista)
+      const camera = cameras[cameras.length - 1];
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          deviceId: camera.deviceId,
+          facingMode: ['user', 'environment'],
+        },
+      });
+
+      const videoTrack = stream.getVideoTracks()[0];
+      setTrack(videoTrack);
+
+      // Aplicar restricciones para activar la linterna
+      await videoTrack.applyConstraints({
+        advanced: [{ torch: true } as any],
+      });
+
+      setDisabled(false);
+      setToggled(true);
+    } catch (err: any) {
+      console.error('Error activando linterna:', err);
+      setDisabled(false);
+      throw err;
+    }
+  };
+
+  const stopAsync = async () => {
+    if (track) {
+      setDisabled(true);
+      track.stop();
+      setTrack(null);
+      setDisabled(false);
+      setToggled(false);
+    }
+  };
+
+  return { toggleAsync, toggled, disabled };
+};
+
 const Tab6: React.FC = () => {
   const [isAvailable, setIsAvailable] = useState(false);
   const [isEnabled, setIsEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
+  const [useWebTorch, setUseWebTorch] = useState(false);
+  
   const isNative = Capacitor.isNativePlatform();
   const platform = Capacitor.getPlatform();
+  
+  // Hook para linterna web
+  const { toggleAsync: toggleWebTorch, toggled: webTorchToggled, disabled: webTorchDisabled } = useFlashlight();
   
   const isActuallyNative = useMemo(() => {
     // Verificar múltiples indicadores de plataforma nativa
@@ -53,24 +127,42 @@ const Tab6: React.FC = () => {
   const checkTorchAvailability = async () => {
     console.log('[Torch] Verificando disponibilidad:', { isNative, isActuallyNative, platform });
     
-    if (!isActuallyNative) {
-      console.log('[Torch] No es plataforma nativa, linterna no disponible');
-      setIsAvailable(false);
-      return;
+    // Primero intentar con el plugin nativo
+    if (isActuallyNative) {
+      try {
+        const result = await Torch.isAvailable();
+        if (result.available) {
+          setIsAvailable(true);
+          const enabledResult = await Torch.isEnabled();
+          setIsEnabled(enabledResult.enabled);
+          setUseWebTorch(false);
+          return;
+        }
+      } catch (error) {
+        console.error('Error con plugin nativo:', error);
+      }
     }
-
+    
+    // Si no funciona el plugin nativo, intentar con getUserMedia
     try {
-      const result = await Torch.isAvailable();
-      setIsAvailable(result.available);
-      
-      if (result.available) {
-        const enabledResult = await Torch.isEnabled();
-        setIsEnabled(enabledResult.enabled);
+      if ('mediaDevices' in navigator) {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const cameras = devices.filter((device) => device.kind === 'videoinput');
+        
+        if (cameras.length > 0) {
+          console.log('[Torch] Usando linterna web con getUserMedia');
+          setIsAvailable(true);
+          setUseWebTorch(true);
+          setIsEnabled(webTorchToggled);
+          return;
+        }
       }
     } catch (error) {
-      console.error('Error verificando disponibilidad de linterna:', error);
-      setIsAvailable(false);
+      console.error('Error verificando cámaras:', error);
     }
+    
+    console.log('[Torch] Linterna no disponible');
+    setIsAvailable(false);
   };
 
   // Habilitar linterna
@@ -125,10 +217,18 @@ const Tab6: React.FC = () => {
 
     setIsLoading(true);
     try {
-      await Torch.toggle();
-      const result = await Torch.isEnabled();
-      setIsEnabled(result.enabled);
-      setAlertMessage(result.enabled ? 'Linterna encendida' : 'Linterna apagada');
+      if (useWebTorch) {
+        // Usar linterna web
+        await toggleWebTorch();
+        setIsEnabled(webTorchToggled);
+        setAlertMessage(webTorchToggled ? 'Linterna encendida' : 'Linterna apagada');
+      } else {
+        // Usar plugin nativo
+        await Torch.toggle();
+        const result = await Torch.isEnabled();
+        setIsEnabled(result.enabled);
+        setAlertMessage(result.enabled ? 'Linterna encendida' : 'Linterna apagada');
+      }
       setShowAlert(true);
     } catch (error: any) {
       console.error('Error alternando linterna:', error);
@@ -225,6 +325,26 @@ const Tab6: React.FC = () => {
               </div>
             </IonCardContent>
           </IonCard>
+        )}
+
+        {/* Botón circular estilo Vue */}
+        {isAvailable && (
+          <div className="center">
+            <button
+              className={`btn ${isEnabled ? 'active' : ''}`}
+              disabled={isLoading || (useWebTorch ? webTorchDisabled : false)}
+              onClick={toggleTorch}
+            >
+              {isLoading ? (
+                <IonSpinner />
+              ) : (
+                <IonIcon 
+                  icon={isEnabled ? flashlight : flashlightOutline} 
+                  className="btn-icon"
+                />
+              )}
+            </button>
+          </div>
         )}
 
         {/* Controles principales */}
@@ -331,14 +451,14 @@ const Tab6: React.FC = () => {
             <IonItem>
               <IonLabel>
                 <h3>Plataforma</h3>
-                <p>{platform} - {isActuallyNative ? 'Nativa' : 'Web'}</p>
+                <p>{platform} - {isNative ? 'Nativa' : 'Web'}</p>
               </IonLabel>
             </IonItem>
 
             <IonItem>
               <IonLabel>
                 <h3>Linterna Disponible</h3>
-                <p>{isAvailable ? 'Sí' : 'No'}</p>
+                <p>{isAvailable ? (useWebTorch ? 'Sí (Web)' : 'Sí (Nativa)') : 'No'}</p>
               </IonLabel>
               <IonIcon 
                 icon={isAvailable ? checkmarkCircle : closeCircle}
