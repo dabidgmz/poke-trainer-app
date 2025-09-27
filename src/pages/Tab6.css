@@ -1,0 +1,474 @@
+/* Estilos para la página de linterna */
+
+.torch-page {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%);
+  min-height: 100vh;
+}
+
+/* Tarjeta de estado */
+.torch-status-card {
+  margin: 20px;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  border: 2px solid #cbd5e1;
+}
+
+.torch-status-content {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 10px;
+}
+
+.torch-icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-radius: 50%;
+  border: 3px solid #f59e0b;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.torch-icon-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.2), transparent);
+  animation: torchScan 3s linear infinite;
+}
+
+@keyframes torchScan {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.torch-icon {
+  font-size: 2.5rem;
+  z-index: 1;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.torch-icon.enabled {
+  color: #f59e0b;
+  animation: torchPulse 2s ease-in-out infinite;
+}
+
+.torch-icon.disabled {
+  color: #6b7280;
+}
+
+@keyframes torchPulse {
+  0%, 100% { 
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% { 
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+.torch-status-info {
+  flex: 1;
+}
+
+.torch-title {
+  margin: 0 0 8px 0;
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: #1e293b;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.torch-subtitle {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.torch-status-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: #f1f5f9;
+  border-radius: 50%;
+  border: 2px solid #e2e8f0;
+}
+
+/* Títulos de sección */
+.section-title {
+  margin: 0 0 20px 0;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #1e293b;
+  text-align: center;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+/* Botones de control */
+.torch-control-btn {
+  --border-radius: 15px;
+  --padding-start: 20px;
+  --padding-end: 20px;
+  --padding-top: 12px;
+  --padding-bottom: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+  border: 2px solid;
+  position: relative;
+  overflow: hidden;
+}
+
+.torch-control-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.torch-control-btn:hover::before {
+  left: 100%;
+}
+
+.torch-control-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.torch-toggle-btn {
+  --border-radius: 20px;
+  --padding-start: 30px;
+  --padding-end: 30px;
+  --padding-top: 15px;
+  --padding-bottom: 15px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.torch-toggle-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.6s ease;
+}
+
+.torch-toggle-btn:hover::before {
+  left: 100%;
+}
+
+.torch-toggle-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Configuración de movimiento */
+.motion-settings {
+  margin-top: 20px;
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 15px;
+  border: 2px solid #e2e8f0;
+}
+
+.sensitivity-control {
+  margin-top: 15px;
+}
+
+.sensitivity-slider {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: #e2e8f0;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.sensitivity-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+  transition: all 0.3s ease;
+}
+
+.sensitivity-slider::-webkit-slider-thumb:hover {
+  background: #2563eb;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.sensitivity-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+  transition: all 0.3s ease;
+}
+
+.sensitivity-slider::-moz-range-thumb:hover {
+  background: #2563eb;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.sensitivity-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.motion-info {
+  margin-top: 15px;
+  text-align: center;
+}
+
+/* Items de información */
+ion-item {
+  --background: #f8fafc;
+  --border-radius: 12px;
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --padding-top: 12px;
+  --padding-bottom: 12px;
+  margin-bottom: 8px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
+}
+
+ion-item:hover {
+  --background: #f1f5f9;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+ion-item ion-label h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 4px 0;
+}
+
+ion-item ion-label p {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Chips */
+ion-chip {
+  --background: #e2e8f0;
+  --color: #475569;
+  font-weight: 600;
+  border: 1px solid #cbd5e1;
+  transition: all 0.3s ease;
+}
+
+ion-chip:hover {
+  --background: #cbd5e1;
+  transform: scale(1.05);
+}
+
+/* Cards */
+ion-card {
+  margin: 20px;
+  border-radius: 20px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  border: 2px solid #e2e8f0;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  transition: all 0.3s ease;
+}
+
+ion-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
+}
+
+ion-card-content {
+  padding: 25px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .torch-status-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 15px;
+  }
+  
+  .torch-icon-container {
+    width: 70px;
+    height: 70px;
+  }
+  
+  .torch-icon {
+    font-size: 2rem;
+  }
+  
+  .torch-title {
+    font-size: 1.2rem;
+  }
+  
+  .torch-toggle-btn {
+    font-size: 1rem;
+    --padding-start: 25px;
+    --padding-end: 25px;
+  }
+  
+  ion-card {
+    margin: 15px;
+  }
+  
+  ion-card-content {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .torch-status-card {
+    margin: 15px;
+  }
+  
+  .torch-icon-container {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .torch-icon {
+    font-size: 1.8rem;
+  }
+  
+  .torch-title {
+    font-size: 1.1rem;
+  }
+  
+  .torch-subtitle {
+    font-size: 0.8rem;
+  }
+  
+  .torch-toggle-btn {
+    font-size: 0.9rem;
+    --padding-start: 20px;
+    --padding-end: 20px;
+    --padding-top: 12px;
+    --padding-bottom: 12px;
+  }
+  
+  .section-title {
+    font-size: 1.1rem;
+  }
+  
+  ion-card {
+    margin: 10px;
+  }
+  
+  ion-card-content {
+    padding: 15px;
+  }
+  
+  .motion-settings {
+    padding: 15px;
+  }
+}
+
+/* Animaciones adicionales */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+ion-card {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Efectos de hover mejorados */
+.torch-control-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.torch-toggle-btn:active {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Estados de carga */
+ion-spinner {
+  --color: currentColor;
+}
+
+/* Mejoras de accesibilidad */
+.torch-control-btn:focus,
+.torch-toggle-btn:focus {
+  outline: 3px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.sensitivity-slider:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Efectos de pulso para elementos activos */
+.torch-icon.enabled {
+  filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.5));
+}
+
+/* Mejoras para dispositivos táctiles */
+@media (pointer: coarse) {
+  .torch-control-btn,
+  .torch-toggle-btn {
+    min-height: 48px;
+  }
+  
+  .sensitivity-slider::-webkit-slider-thumb {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .sensitivity-slider::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+  }
+}

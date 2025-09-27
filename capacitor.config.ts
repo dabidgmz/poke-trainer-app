@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   appName: 'PokeTrainerApp',
   webDir: 'dist',
   server: {
-    androidScheme: 'https'
+    androidScheme: 'http'
   },
   plugins: {
     Camera: {
@@ -58,7 +58,9 @@ const config: CapacitorConfig = {
       'android.permission.USE_BIOMETRIC', // Para Android 10+
       'android.permission.USE_FINGERPRINT', // Para versiones anteriores
       'android.permission.BIND_BIOMETRIC_SERVICE', // Servicio biométrico
-      'com.samsung.android.providers.context.permission.WRITE_USE_APP_FEATURE_SURVEY' // Para Samsung
+      'com.samsung.android.providers.context.permission.WRITE_USE_APP_FEATURE_SURVEY',
+      'android.permission.USE_FINGERPRINT',
+      'android.permission.FLASHLIGHT' // Para la linterna
     ],
     allowMixedContent: true,
     buildOptions: {
