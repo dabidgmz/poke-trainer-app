@@ -102,6 +102,9 @@ const Tab6: React.FC = () => {
   const [isMotionSupported, setIsMotionSupported] = useState(false);
   const [isMotionActive, setIsMotionActive] = useState(false);
   const [motionMagnitude, setMotionMagnitude] = useState(0);
+  const [motionCount, setMotionCount] = useState(0);
+  const [lastMotionMagnitude, setLastMotionMagnitude] = useState(0);
+  const [isAutoLightEnabled, setIsAutoLightEnabled] = useState(false);
   
   const isNative = Capacitor.isNativePlatform();
   const platform = Capacitor.getPlatform();
@@ -259,6 +262,26 @@ const Tab6: React.FC = () => {
   // Función para activar/desactivar el monitoreo de movimiento
   const toggleMotionMonitoring = () => {
     setIsMotionActive(!isMotionActive);
+    if (!isMotionActive) {
+      setMotionCount(0); // Resetear contador al activar
+    }
+  };
+
+  // Función para activar/desactivar encendido automático
+  const toggleAutoLight = () => {
+    const newValue = !isAutoLightEnabled;
+    setIsAutoLightEnabled(newValue);
+    if (newValue) {
+      setMotionCount(0); // Resetear contador al activar modo automático
+      if (!isMotionActive) {
+        setIsMotionActive(true); // Activar monitoreo automáticamente
+      }
+    }
+  };
+
+  // Función para resetear el contador
+  const resetMotionCount = () => {
+    setMotionCount(0);
   };
 
   // Efecto para detectar movimiento del dispositivo
@@ -269,6 +292,9 @@ const Tab6: React.FC = () => {
     }
 
     let handleMotion: ((event: DeviceMotionEvent) => void) | null = null;
+    const MOTION_THRESHOLD = 15; // Umbral para detectar un movimiento significativo
+    const MOTION_COOLDOWN = 500; // Tiempo de espera entre movimientos (ms)
+    let lastMotionTime = 0;
 
     if (isMotionActive && isMotionSupported) {
       handleMotion = (event: DeviceMotionEvent) => {
@@ -286,6 +312,24 @@ const Tab6: React.FC = () => {
           // Calcular magnitud del movimiento
           const magnitude = Math.sqrt(x * x + y * y + z * z);
           setMotionMagnitude(parseFloat(magnitude.toFixed(2)));
+          
+          // Detectar movimiento significativo (pico)
+          if (isAutoLightEnabled) {
+            const currentTime = Date.now();
+            
+            // Detectar un pico de movimiento significativo
+            if (magnitude > MOTION_THRESHOLD && (currentTime - lastMotionTime) > MOTION_COOLDOWN) {
+              lastMotionTime = currentTime;
+              
+              setMotionCount(prevCount => {
+                const newCount = prevCount + 1;
+                console.log(`Movimiento detectado! Total: ${newCount}/3`);
+                return newCount;
+              });
+            }
+          }
+          
+          setLastMotionMagnitude(magnitude);
         }
       };
 
@@ -297,7 +341,57 @@ const Tab6: React.FC = () => {
         window.removeEventListener('devicemotion', handleMotion);
       }
     };
-  }, [isMotionActive, isMotionSupported]);
+  }, [isMotionActive, isMotionSupported, isAutoLightEnabled]);
+
+  // Efecto para encender/apagar la linterna después de 3 movimientos
+  useEffect(() => {
+    if (isAutoLightEnabled && motionCount >= 3 && isAvailable) {
+      console.log('¡3 movimientos detectados! Alternando linterna...');
+      
+      // Alternar la linterna (encender o apagar)
+      const toggleLight = async () => {
+        try {
+          if (isEnabled) {
+            // Apagar la linterna
+            if (useWebTorch) {
+              if (webTorchToggled) {
+                await toggleWebTorch();
+              }
+            } else {
+              await Torch.disable();
+            }
+            setIsEnabled(false);
+            setAlertMessage('¡Linterna apagada automáticamente! 3 movimientos detectados 💤');
+            setShowAlert(true);
+          } else {
+            // Encender la linterna
+            if (useWebTorch) {
+              if (!webTorchToggled) {
+                await toggleWebTorch();
+              }
+            } else {
+              await Torch.enable();
+            }
+            setIsEnabled(true);
+            setAlertMessage('¡Linterna encendida automáticamente! 3 movimientos detectados 🎉');
+            setShowAlert(true);
+          }
+          
+          // Resetear contador después de alternar
+          setTimeout(() => {
+            setMotionCount(0);
+          }, 1000);
+        } catch (error: any) {
+          console.error('Error alternando linterna automáticamente:', error);
+          setAlertMessage(`Error: ${error.message || 'No se pudo alternar la linterna'}`);
+          setShowAlert(true);
+          setMotionCount(0);
+        }
+      };
+      
+      toggleLight();
+    }
+  }, [motionCount, isAutoLightEnabled, isAvailable, useWebTorch, webTorchToggled, isEnabled]);
 
   // Efecto inicial
   useEffect(() => {
@@ -485,6 +579,126 @@ const Tab6: React.FC = () => {
             
             {isMotionSupported ? (
               <>
+                {/* Control de encendido automático */}
+                <div style={{ 
+                  backgroundColor: isAutoLightEnabled 
+                    ? (isEnabled ? '#f8d7da' : '#d4edda')
+                    : '#f8f9fa',
+                  padding: '16px', 
+                  borderRadius: '8px',
+                  marginBottom: '16px',
+                  border: isAutoLightEnabled 
+                    ? (isEnabled ? '2px solid #dc3545' : '2px solid #28a745')
+                    : '2px solid #dee2e6',
+                  transition: 'all 0.3s ease'
+                }}>
+                  <IonItem lines="none" style={{ '--background': 'transparent' }}>
+                    <IonIcon 
+                      icon={flashlight} 
+                      slot="start" 
+                      color={isAutoLightEnabled ? (isEnabled ? 'danger' : 'success') : 'medium'}
+                    />
+                    <IonLabel>
+                      <h3 style={{ fontWeight: 'bold' }}>Control Automático</h3>
+                      <p style={{ fontSize: '12px' }}>
+                        {isAutoLightEnabled 
+                          ? (isEnabled 
+                              ? 'Mueve 3 veces para apagar la linterna' 
+                              : 'Mueve 3 veces para encender la linterna')
+                          : 'Activar para controlar con movimientos'}
+                      </p>
+                    </IonLabel>
+                    <IonToggle 
+                      checked={isAutoLightEnabled}
+                      onIonChange={toggleAutoLight}
+                      color="success"
+                    />
+                  </IonItem>
+
+                  {/* Contador de movimientos */}
+                  {isAutoLightEnabled && (
+                    <div style={{ 
+                      marginTop: '12px',
+                      textAlign: 'center',
+                      padding: '16px',
+                      backgroundColor: 'white',
+                      borderRadius: '8px',
+                      border: isEnabled ? '2px solid #dc3545' : '2px solid #28a745'
+                    }}>
+                      <div style={{ 
+                        fontSize: '14px', 
+                        fontWeight: 'bold',
+                        color: isEnabled ? '#dc3545' : '#28a745', 
+                        marginBottom: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                      }}>
+                        <IonIcon 
+                          icon={isEnabled ? flashlight : flashlightOutline} 
+                          style={{ fontSize: '18px' }}
+                        />
+                        {isEnabled ? 'Modo: APAGAR' : 'Modo: ENCENDER'}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
+                        Contador de Movimientos
+                      </div>
+                      <div style={{ 
+                        display: 'flex', 
+                        justifyContent: 'center', 
+                        gap: '12px',
+                        marginBottom: '8px'
+                      }}>
+                        {[1, 2, 3].map((num) => {
+                          const activeColor = isEnabled ? '#dc3545' : '#28a745';
+                          const activeBorderColor = isEnabled ? '#c82333' : '#1e7e34';
+                          const pulseAnimation = isEnabled ? 'counterPulseRed' : 'counterPulse';
+                          return (
+                            <div
+                              key={num}
+                              style={{
+                                width: '50px',
+                                height: '50px',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '24px',
+                                fontWeight: 'bold',
+                                backgroundColor: motionCount >= num ? activeColor : '#e9ecef',
+                                color: motionCount >= num ? 'white' : '#6c757d',
+                                transition: 'all 0.3s ease',
+                                border: motionCount >= num ? `3px solid ${activeBorderColor}` : '3px solid #dee2e6',
+                                animation: motionCount === num ? `${pulseAnimation} 0.5s ease-out` : 'none'
+                              }}
+                            >
+                              {num}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div style={{ 
+                        fontSize: '18px', 
+                        fontWeight: 'bold',
+                        color: motionCount >= 3 ? (isEnabled ? '#dc3545' : '#28a745') : '#6c757d'
+                      }}>
+                        {motionCount}/3 Movimientos
+                      </div>
+                      {motionCount > 0 && motionCount < 3 && (
+                        <IonButton 
+                          size="small" 
+                          fill="clear" 
+                          onClick={resetMotionCount}
+                          style={{ marginTop: '8px' }}
+                        >
+                          Resetear Contador
+                        </IonButton>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 <IonButton 
                   expand="block" 
                   onClick={toggleMotionMonitoring}
@@ -600,6 +814,23 @@ const Tab6: React.FC = () => {
                       <IonIcon icon={phonePortrait} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
                       <strong>Mueve tu teléfono</strong> para ver los valores cambiar en tiempo real
                     </div>
+
+                    {/* Indicador de movimiento significativo */}
+                    {isAutoLightEnabled && motionMagnitude > 15 && (
+                      <div style={{ 
+                        marginTop: '12px', 
+                        padding: '12px',
+                        backgroundColor: '#28a745',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        color: 'white',
+                        fontWeight: 'bold',
+                        textAlign: 'center',
+                        animation: 'pulse 0.5s ease-in-out'
+                      }}>
+                        🎯 ¡Movimiento Detectado!
+                      </div>
+                    )}
                   </div>
                 )}
 

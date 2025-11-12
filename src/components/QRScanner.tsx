@@ -328,6 +328,15 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
       // Configurar el video element
       if (videoRef.current) {
         videoRef.current.style.display = 'block';
+        
+        // Agregar event listener para manejar el evento canplay
+        videoRef.current.oncanplay = () => {
+          if (videoRef.current && videoRef.current.paused) {
+            videoRef.current.play().catch(err => {
+              log('Error playing video:', err);
+            });
+          }
+        };
       }
 
       webControls.current = await codeReader.decodeFromVideoDevice(
@@ -424,10 +433,16 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQRDetected, onClose }) => {
   }, [cleanup]);
 
   useEffect(() => {
-    // Auto-inicio al montar
-    startScan();
-    return () => { cleanup(); };
-  }, [cleanup, startScan]);
+    // Auto-inicio al montar con un pequeño delay para evitar conflictos
+    const timer = setTimeout(() => {
+      startScan();
+    }, 300);
+    
+    return () => {
+      clearTimeout(timer);
+      cleanup();
+    };
+  }, []);
 
   return (
     <IonPage className="qr-scanner-page">
