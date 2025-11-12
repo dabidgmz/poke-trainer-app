@@ -32,7 +32,8 @@ import {
   add,
   ellipse,
   flashlight,
-  flashlightOutline
+  flashlightOutline,
+  warning
 } from 'ionicons/icons';
 import { Camera, CameraResultType, CameraSource, PermissionStatus } from '@capacitor/camera';
 import { Capacitor } from '@capacitor/core';
@@ -573,27 +574,28 @@ const Tab4: React.FC = () => {
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen className="capture-content">
-        {/* Controlador de linterna con switch */}
-        {isTorchAvailable && (
-          <div style={{
-            position: 'fixed',
-            top: '70px',
-            right: '16px',
-            zIndex: 1000,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-            alignItems: 'flex-end'
-          }}>
-            {/* Switch de control de linterna */}
-            <div style={{
-              backgroundColor: 'rgba(0, 0, 0, 0.85)',
-              padding: '16px',
-              borderRadius: '16px',
-              boxShadow: '0 6px 20px rgba(0, 0, 0, 0.4)',
-              minWidth: '180px',
-              backdropFilter: 'blur(10px)'
-            }}>
+        {/* Controlador de linterna con switch - Siempre visible */}
+        <div style={{
+          position: 'fixed',
+          top: '70px',
+          right: '16px',
+          zIndex: 1000,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+          alignItems: 'flex-end'
+        }}>
+          {isTorchAvailable ? (
+            <>
+              {/* Switch de control de linterna */}
+              <div style={{
+                backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                padding: '16px',
+                borderRadius: '16px',
+                boxShadow: '0 6px 20px rgba(0, 0, 0, 0.4)',
+                minWidth: '180px',
+                backdropFilter: 'blur(10px)'
+              }}>
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -781,8 +783,44 @@ const Tab4: React.FC = () => {
                 </div>
               </div>
             )}
-          </div>
-        )}
+            </>
+          ) : (
+            /* Mensaje cuando la linterna no está disponible */
+            <div style={{
+              backgroundColor: 'rgba(255, 87, 34, 0.95)',
+              padding: '12px',
+              borderRadius: '12px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+              maxWidth: '200px'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginBottom: '6px'
+              }}>
+                <IonIcon 
+                  icon={warning} 
+                  style={{ fontSize: '18px', color: 'white' }}
+                />
+                <div style={{
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: 'bold'
+                }}>
+                  Linterna No Disponible
+                </div>
+              </div>
+              <div style={{
+                color: 'white',
+                fontSize: '11px',
+                lineHeight: '1.4'
+              }}>
+                Solo disponible en dispositivos con app nativa instalada
+              </div>
+            </div>
+          )}
+        </div>
 
         <div className="capture-body">
           {/* Cámara de captura */}
