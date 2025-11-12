@@ -3,7 +3,7 @@ import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonContent,
   IonButton, IonCard, IonCardContent, IonIcon, IonSpinner,
   IonAlert, IonToggle, IonItem, IonLabel, IonText,
-  IonGrid, IonRow, IonCol, IonChip
+  IonGrid, IonRow, IonCol, IonChip, IonBadge
 } from '@ionic/react';
 import { alertController } from '@ionic/core';
 import { Capacitor } from '@capacitor/core';
@@ -14,7 +14,8 @@ import {
   warning,
   checkmarkCircle,
   closeCircle,
-  settings
+  settings,
+  navigate
 } from 'ionicons/icons';
 import { Torch } from '@capawesome/capacitor-torch';
 import './Tab6.css';
@@ -95,6 +96,12 @@ const Tab6: React.FC = () => {
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [useWebTorch, setUseWebTorch] = useState(false);
+  
+  // Estados para detección de movimiento
+  const [motionData, setMotionData] = useState({ x: 0, y: 0, z: 0 });
+  const [isMotionSupported, setIsMotionSupported] = useState(false);
+  const [isMotionActive, setIsMotionActive] = useState(false);
+  const [motionMagnitude, setMotionMagnitude] = useState(0);
   
   const isNative = Capacitor.isNativePlatform();
   const platform = Capacitor.getPlatform();
@@ -241,9 +248,56 @@ const Tab6: React.FC = () => {
 
   // Función para mostrar información sobre detección de movimiento
   const showMotionInfo = () => {
-    setAlertMessage('La detección de movimiento por acelerómetro no está disponible en esta versión. Usa los botones para controlar la linterna.');
+    if (isMotionSupported) {
+      setAlertMessage('El sensor de movimiento está activo. Mueve tu dispositivo para ver los cambios en tiempo real.');
+    } else {
+      setAlertMessage('La detección de movimiento no está disponible en este dispositivo o navegador.');
+    }
     setShowAlert(true);
   };
+
+  // Función para activar/desactivar el monitoreo de movimiento
+  const toggleMotionMonitoring = () => {
+    setIsMotionActive(!isMotionActive);
+  };
+
+  // Efecto para detectar movimiento del dispositivo
+  useEffect(() => {
+    // Verificar si DeviceMotion está disponible
+    if (window.DeviceMotionEvent) {
+      setIsMotionSupported(true);
+    }
+
+    let handleMotion: ((event: DeviceMotionEvent) => void) | null = null;
+
+    if (isMotionActive && isMotionSupported) {
+      handleMotion = (event: DeviceMotionEvent) => {
+        if (event.accelerationIncludingGravity) {
+          const x = event.accelerationIncludingGravity.x || 0;
+          const y = event.accelerationIncludingGravity.y || 0;
+          const z = event.accelerationIncludingGravity.z || 0;
+          
+          setMotionData({ 
+            x: parseFloat(x.toFixed(2)), 
+            y: parseFloat(y.toFixed(2)), 
+            z: parseFloat(z.toFixed(2)) 
+          });
+          
+          // Calcular magnitud del movimiento
+          const magnitude = Math.sqrt(x * x + y * y + z * z);
+          setMotionMagnitude(parseFloat(magnitude.toFixed(2)));
+        }
+      };
+
+      window.addEventListener('devicemotion', handleMotion);
+    }
+
+    return () => {
+      if (handleMotion) {
+        window.removeEventListener('devicemotion', handleMotion);
+      }
+    };
+  }, [isMotionActive, isMotionSupported]);
 
   // Efecto inicial
   useEffect(() => {
@@ -418,30 +472,158 @@ const Tab6: React.FC = () => {
           </IonCard>
         )}
 
-        {/* Información sobre detección de movimiento */}
-        {isAvailable && (
-          <IonCard>
-            <IonCardContent>
-              <h3 className="section-title">Control por Movimiento</h3>
-              
-              <IonItem button onClick={showMotionInfo}>
-                <IonIcon icon={phonePortrait} slot="start" />
-                <IonLabel>
-                  <h3>Detección de Movimiento</h3>
-                  <p>Próximamente: Mueve el dispositivo para alternar la linterna</p>
-                </IonLabel>
-                <IonIcon icon={warning} slot="end" color="warning" />
-              </IonItem>
+        {/* Controlador de detección de movimiento */}
+        <IonCard>
+          <IonCardContent>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 className="section-title" style={{ margin: 0 }}>Sensor de Movimiento</h3>
+              <IonChip color={isMotionSupported ? 'success' : 'danger'}>
+                <IonIcon icon={isMotionSupported ? checkmarkCircle : closeCircle} />
+                <IonLabel>{isMotionSupported ? 'Disponible' : 'No Disponible'}</IonLabel>
+              </IonChip>
+            </div>
+            
+            {isMotionSupported ? (
+              <>
+                <IonButton 
+                  expand="block" 
+                  onClick={toggleMotionMonitoring}
+                  color={isMotionActive ? 'danger' : 'primary'}
+                  style={{ marginBottom: '16px' }}
+                >
+                  <IonIcon icon={navigate} slot="start" />
+                  {isMotionActive ? 'Detener Monitor' : 'Iniciar Monitor'}
+                </IonButton>
 
-              <div className="motion-info">
-                <IonChip color="warning">
-                  <IonIcon icon={warning} />
-                  <IonLabel>En Desarrollo</IonLabel>
-                </IonChip>
+                {isMotionActive && (
+                  <div style={{ 
+                    backgroundColor: 'var(--ion-color-light)', 
+                    padding: '16px', 
+                    borderRadius: '8px',
+                    marginBottom: '16px'
+                  }}>
+                    <h4 style={{ marginTop: 0, marginBottom: '12px', color: 'var(--ion-color-primary)' }}>
+                      Datos del Acelerómetro
+                    </h4>
+                    
+                    <IonGrid>
+                      <IonRow>
+                        <IonCol size="4">
+                          <div style={{ 
+                            textAlign: 'center', 
+                            padding: '12px',
+                            backgroundColor: 'white',
+                            borderRadius: '8px',
+                            border: '2px solid #e74c3c'
+                          }}>
+                            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Eje X</div>
+                            <div style={{ 
+                              fontSize: '24px', 
+                              fontWeight: 'bold',
+                              color: '#e74c3c'
+                            }}>
+                              {motionData.x}
+                            </div>
+                            <div style={{ fontSize: '10px', color: '#999' }}>m/s²</div>
+                          </div>
+                        </IonCol>
+                        
+                        <IonCol size="4">
+                          <div style={{ 
+                            textAlign: 'center', 
+                            padding: '12px',
+                            backgroundColor: 'white',
+                            borderRadius: '8px',
+                            border: '2px solid #3498db'
+                          }}>
+                            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Eje Y</div>
+                            <div style={{ 
+                              fontSize: '24px', 
+                              fontWeight: 'bold',
+                              color: '#3498db'
+                            }}>
+                              {motionData.y}
+                            </div>
+                            <div style={{ fontSize: '10px', color: '#999' }}>m/s²</div>
+                          </div>
+                        </IonCol>
+                        
+                        <IonCol size="4">
+                          <div style={{ 
+                            textAlign: 'center', 
+                            padding: '12px',
+                            backgroundColor: 'white',
+                            borderRadius: '8px',
+                            border: '2px solid #2ecc71'
+                          }}>
+                            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Eje Z</div>
+                            <div style={{ 
+                              fontSize: '24px', 
+                              fontWeight: 'bold',
+                              color: '#2ecc71'
+                            }}>
+                              {motionData.z}
+                            </div>
+                            <div style={{ fontSize: '10px', color: '#999' }}>m/s²</div>
+                          </div>
+                        </IonCol>
+                      </IonRow>
+                    </IonGrid>
+
+                    <div style={{ 
+                      marginTop: '16px',
+                      padding: '12px',
+                      backgroundColor: 'white',
+                      borderRadius: '8px',
+                      border: '2px solid #9b59b6',
+                      textAlign: 'center'
+                    }}>
+                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Magnitud Total</div>
+                      <div style={{ 
+                        fontSize: '28px', 
+                        fontWeight: 'bold',
+                        color: '#9b59b6'
+                      }}>
+                        {motionMagnitude}
+                      </div>
+                      <div style={{ fontSize: '10px', color: '#999' }}>m/s²</div>
+                    </div>
+
+                    <div style={{ 
+                      marginTop: '12px', 
+                      padding: '8px',
+                      backgroundColor: '#fff3cd',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      color: '#856404'
+                    }}>
+                      <IonIcon icon={phonePortrait} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+                      <strong>Mueve tu teléfono</strong> para ver los valores cambiar en tiempo real
+                    </div>
+                  </div>
+                )}
+
+                <IonItem button onClick={showMotionInfo}>
+                  <IonIcon icon={phonePortrait} slot="start" />
+                  <IonLabel>
+                    <h3>Información del Sensor</h3>
+                    <p>Toca para más detalles sobre la detección de movimiento</p>
+                  </IonLabel>
+                </IonItem>
+              </>
+            ) : (
+              <div style={{ 
+                padding: '16px', 
+                backgroundColor: '#f8d7da',
+                borderRadius: '8px',
+                color: '#721c24'
+              }}>
+                <IonIcon icon={warning} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+                El sensor de movimiento no está disponible en este dispositivo o navegador.
               </div>
-            </IonCardContent>
-          </IonCard>
-        )}
+            )}
+          </IonCardContent>
+        </IonCard>
 
         {/* Información del dispositivo */}
         <IonCard>
@@ -480,11 +662,11 @@ const Tab6: React.FC = () => {
             <IonItem>
               <IonLabel>
                 <h3>Detección de Movimiento</h3>
-                <p>En desarrollo</p>
+                <p>{isMotionSupported ? (isMotionActive ? 'Activo' : 'Disponible') : 'No disponible'}</p>
               </IonLabel>
               <IonIcon 
-                icon={warning}
-                color="warning"
+                icon={isMotionSupported ? (isMotionActive ? checkmarkCircle : navigate) : warning}
+                color={isMotionSupported ? (isMotionActive ? 'success' : 'primary') : 'warning'}
               />
             </IonItem>
           </IonCardContent>
