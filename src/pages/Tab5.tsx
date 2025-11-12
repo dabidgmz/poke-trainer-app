@@ -1,504 +1,435 @@
 // src/pages/Tab5.tsx
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton,
-  IonContent, IonList, IonItem, IonLabel, IonText, IonCard, IonCardContent,
-  IonFab, IonFabButton, IonIcon, IonAlert, IonSpinner
+  IonPage, IonHeader, IonToolbar, IonTitle, IonContent,
+  IonCard, IonCardContent, IonCardHeader, IonCardTitle,
+  IonAvatar, IonButton, IonIcon, IonItem, IonLabel,
+  IonInput, IonSelect, IonSelectOption, IonModal,
+  IonList, IonAlert, IonChip, IonBadge
 } from '@ionic/react';
-import { alertController } from '@ionic/core';
-import { Capacitor } from '@capacitor/core';
-import { SplashScreen } from '@capacitor/splash-screen';
-import { fingerPrint, phonePortrait, warning } from 'ionicons/icons';
+import { 
+  person, 
+  mail, 
+  call, 
+  male, 
+  female, 
+  create, 
+  logOut,
+  camera,
+  checkmarkCircle,
+  close,
+  saveOutline
+} from 'ionicons/icons';
+import './Tab5.css';
 
-import { NativeBiometric, BiometryType } from '@capgo/capacitor-native-biometric';
-
-type BiometryTypeEntry = { title: string; type: number };
-
-const BIOMETRY_TYPES: BiometryTypeEntry[] = [
-  { title: 'None', type: BiometryType.NONE },
-  { title: 'Touch ID', type: BiometryType.TOUCH_ID },
-  { title: 'Face ID', type: BiometryType.FACE_ID },
-  { title: 'Fingerprint', type: BiometryType.FINGERPRINT },
-];
+interface UserProfile {
+  name: string;
+  email: string;
+  phone: string;
+  gender: 'male' | 'female' | 'other';
+  trainerImage: string;
+  trainerId: number;
+}
 
 const Tab5: React.FC = () => {
-  const [biometry, setBiometry] = useState({
-    isAvailable: false,
-    biometryType: BiometryType.NONE,
-    reason: '',
+  const [profile, setProfile] = useState<UserProfile>({
+    name: 'Ash Ketchum',
+    email: 'ash@pokemon.com',
+    phone: '+52 123 456 7890',
+    gender: 'male',
+    trainerImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png',
+    trainerId: 1
   });
 
-  const [message, setMessage] = useState('');
-  const [permissionStatus, setPermissionStatus] = useState('No verificado');
-  const [isLoading, setIsLoading] = useState(false);
-  const [showPWAAlert, setShowPWAAlert] = useState(false);
-  const [passkeyCreated, setPasskeyCreated] = useState(false);
-  const [currentPasskey, setCurrentPasskey] = useState<any>(null);
+  const [editProfile, setEditProfile] = useState<UserProfile>(profile);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showLogoutAlert, setShowLogoutAlert] = useState(false);
 
-  const isNative = Capacitor.isNativePlatform();
-  const platform = Capacitor.getPlatform();
-  const isIOS = platform === 'ios';
-  const isAndroid = platform === 'android';
+  // Imágenes de entrenadores
+  const trainerImages = [
+    'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png', // Pikachu
+    'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/4.png', // Charmander
+    'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/7.png', // Squirtle
+    'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/1.png', // Bulbasaur
+    'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/6.png', // Charizard
+    'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/9.png', // Blastoise
+    'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/150.png', // Mewtwo
+    'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/151.png', // Mew
+  ];
 
-  // Detección mejorada de PWA
-  const isPWA = useMemo(() => {
-    return !isNative && 
-           (window.matchMedia('(display-mode: standalone)').matches || 
-            (window.navigator as any).standalone ||
-            document.referrer.includes('android-app://'));
-  }, [isNative]);
-
-  const biometryName = useMemo(() => {
-    if (biometry.biometryType === BiometryType.FACE_ID) return 'Face ID';
-    if (biometry.biometryType === BiometryType.TOUCH_ID) return 'Touch ID';
-    if (biometry.biometryType === BiometryType.FINGERPRINT) return 'Fingerprint';
-    return 'No biometry';
-  }, [biometry]);
-
-  const updateBiometryInfo = (info: any) => setBiometry(info);
-
-  const showAlert = async (message: string) => {
-    const alert = await alertController.create({
-      header: `${biometryName} says:`,
-      message,
-      buttons: ['OK'],
+  const changeTrainerImage = () => {
+    const randomIndex = Math.floor(Math.random() * trainerImages.length);
+    setEditProfile({
+      ...editProfile,
+      trainerImage: trainerImages[randomIndex],
+      trainerId: randomIndex
     });
-    await alert.present();
   };
 
-  const showErrorAlert = async (error: any) => {
-    await showAlert(`${error.message || error} [${error.code || 'unknown'}].`);
+  const handleSaveProfile = () => {
+    setProfile(editProfile);
+    setShowEditModal(false);
   };
 
-  // Generar challenge aleatorio para WebAuthn
-  // The challenge is a crucial part of the authentication process, 
-  // and is used to mitigate "replay attacks" and allow server-side authentication
-  // in a real app, you'll want to generate the challenge server-side and 
-  // maintain a session or temporary record of this challenge in your DB
-  const generateRandomChallenge = (): ArrayBuffer => {
-    const length = 32;
-    const randomValues = new Uint8Array(length);
-    window.crypto.getRandomValues(randomValues);
-    return randomValues.buffer;
+  const handleCancelEdit = () => {
+    setEditProfile(profile);
+    setShowEditModal(false);
   };
 
-  // Verificar disponibilidad de WebAuthn para PWA
-  const checkWebAuthnSupport = async (): Promise<boolean> => {
-    if (!window.PublicKeyCredential) {
-      return false;
-    }
-    
-    try {
-      return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-    } catch (error) {
-      console.log('WebAuthn no disponible:', error);
-      return false;
-    }
+  const handleLogout = () => {
+    setShowLogoutAlert(true);
   };
 
-  // Crear Passkey con WebAuthn
-  const createPasskey = async (): Promise<boolean> => {
-    try {
-      if (!navigator.credentials || !navigator.credentials.create || !navigator.credentials.get) {
-        alert("Your browser does not support the Web Authentication API");
-        return false;
-      }
-      
-      const credentials = await navigator.credentials.create({
-        publicKey: {
-          challenge: generateRandomChallenge(),
-          rp: { name: "Pokémon Trainer", id: window.location.hostname },
-          // here you'll want to pass the user's info
-          user: { id: new Uint8Array(16), name: "trainer@pokemon.com", displayName: "Pokémon Trainer"},
-          pubKeyCredParams: [
-            { type: "public-key", alg: -7 },
-            { type: "public-key", alg: -257 }
-          ],
-          timeout: 60000,
-          authenticatorSelection: {residentKey: "preferred", requireResidentKey: false, userVerification: "preferred"},
-          attestation: "none",
-          extensions: { credProps: true }
-        }
-      });
-      
-      // in a real app, you'll store the credentials against the user's profile in your DB
-      // here we'll just save it in a global variable
-      setCurrentPasskey(credentials);
-      setPasskeyCreated(true);
-      setMessage('Passkey creado exitosamente');
-      console.log(credentials);
-      return true;
-    } catch (error: any) {
-      console.error('Error creando passkey:', error);
-      setMessage(`Error creando passkey: ${error.message}`);
-      return false;
-    }
+  const confirmLogout = () => {
+    // Aquí irían las acciones de cierre de sesión
+    console.log('Sesión cerrada');
+    // Podrías redirigir o limpiar datos
   };
-
-  // Verificar Passkey con WebAuthn
-  const verifyPasskey = async (): Promise<boolean> => {
-    try {
-      // to verify a user's credentials, we simply pass the 
-      // unique ID of the passkey we saved against the user profile
-      // in this demo, we just saved it in a global variable
-      const credentials = await navigator.credentials.get({
-        publicKey: {
-          challenge: generateRandomChallenge(),
-          allowCredentials: [{ type: "public-key", id: currentPasskey.rawId }]
-        }
-      });
-      
-      console.log(credentials);
-      setMessage('Autenticación biométrica exitosa con WebAuthn!');
-      return true;
-    } catch (error: any) {
-      console.error('Error verificando passkey:', error);
-      setMessage(`Error en autenticación: ${error.message}`);
-      return false;
-    }
-  };
-
-  // Verificar permisos biométricos
-  const checkBiometricAvailability = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      console.log('[Biometric] Verificando plataforma:', {
-        isNative,
-        platform,
-        isPWA,
-        userAgent: navigator.userAgent
-      });
-
-      // Si es PWA, mostrar mensaje específico
-      if (isPWA) {
-        setBiometry({
-          isAvailable: false,
-          biometryType: BiometryType.NONE,
-          reason: 'PWA - WebAuthn disponible'
-        });
-        setMessage('WebAuthn disponible. Puedes crear un passkey para autenticación biométrica.');
-        setPermissionStatus('PWA - WebAuthn');
-        return;
-      }
-
-      // Si no es nativo (navegador web normal)
-      if (!isNative) {
-        setBiometry({
-          isAvailable: false,
-          biometryType: BiometryType.NONE,
-          reason: 'Navegador web - WebAuthn disponible'
-        });
-        setMessage('WebAuthn disponible. Puedes crear un passkey para autenticación biométrica.');
-        setPermissionStatus('Navegador Web');
-        return;
-      }
-
-      // PLATAFORMA NATIVA - Verificar biometría real
-      console.log('[Biometric] Verificando biometría en plataforma nativa...');
-      setPermissionStatus('Verificando...');
-
-      try {
-        const result = await NativeBiometric.isAvailable();
-        console.log('[Biometric] Resultado nativo:', result);
-        
-        setBiometry({
-          isAvailable: result.isAvailable,
-          biometryType: result.biometryType,
-          reason: ''
-        });
-        setPermissionStatus(result.isAvailable ? 'Disponible' : 'No disponible');
-        
-        if (result.isAvailable) {
-          setMessage(`${biometryName} configurado y listo`);
-        } else {
-          setMessage(`Configure ${platform === 'ios' ? 'Face ID/Touch ID' : 'Huella digital'} en ajustes del dispositivo`);
-        }
-      } catch (error) {
-        console.error('[Biometric] Error en plugin nativo:', error);
-        setBiometry({
-          isAvailable: false,
-          biometryType: BiometryType.NONE,
-          reason: `Error del plugin: ${error}`
-        });
-        setPermissionStatus('Error en plugin');
-        setMessage('Error al acceder a la biometría nativa');
-      }
-
-    } catch (error) {
-      console.error('[Biometric] Error general:', error);
-      setMessage(`Error: ${error}`);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [isNative, platform, isPWA, biometryName]);
-
-  // Autenticación biométrica
-  const onAuthenticate = async () => {
-    // Si es PWA/Web, usar WebAuthn
-    if (isPWA || !isNative) {
-      if (!passkeyCreated) {
-        // Crear passkey primero
-        setIsLoading(true);
-        const created = await createPasskey();
-        setIsLoading(false);
-        if (created) {
-          await showAlert('Passkey creado. Ahora puedes autenticarte.');
-        }
-      } else {
-        // Verificar passkey
-        setIsLoading(true);
-        const verified = await verifyPasskey();
-        setIsLoading(false);
-        if (verified) {
-          await showAlert('Autenticación exitosa con WebAuthn!');
-        }
-      }
-      return;
-    }
-
-    // Verificar disponibilidad antes de autenticar
-    if (!biometry.isAvailable) {
-      setMessage('La biometría no está disponible en este dispositivo');
-      await showAlert('Configure la biometría en los ajustes de su dispositivo');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      console.log('[Biometric] Iniciando autenticación...');
-      
-      await NativeBiometric.verifyIdentity({
-        reason: 'Para un inicio de sesión seguro',
-        title: 'Autenticación requerida',
-        subtitle: 'Verifique su identidad',
-        description: 'Use su huella digital, Face ID o Touch ID para continuar',
-        maxAttempts: 3,
-        useFallback: true,
-      });
-      
-      setMessage('¡Autenticación biométrica exitosa!');
-      await showAlert('Autenticación exitosa. Bienvenido.');
-      
-    } catch (error: any) {
-      console.error('[Biometric] Error en autenticación:', error);
-      
-      // Manejar errores específicos
-      if (error.code === 'AUTHENTICATION_FAILED') {
-        setMessage('Autenticación fallida. Intente nuevamente.');
-      } else if (error.code === 'BIOMETRY_NOT_AVAILABLE') {
-        setMessage('Biometría no disponible temporalmente');
-      } else if (error.code === 'USER_CANCELED') {
-        setMessage('Autenticación cancelada por el usuario');
-      } else {
-        setMessage(`Error: ${error.message || error}`);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Efecto inicial
-  useEffect(() => {
-    const initialize = async () => {
-      try {
-        await SplashScreen.hide();
-      } catch {
-        // Ignorar errores de SplashScreen
-      }
-      await checkBiometricAvailability();
-    };
-
-    initialize();
-  }, [checkBiometricAvailability]);
-
 
   return (
-    <IonPage className="w-full h-full">
+    <IonPage className="profile-page">
       <IonHeader>
-        <IonToolbar>
-          <IonTitle>Autenticación Biométrica</IonTitle>
-          <IonButtons slot="end">
-            <IonButton onClick={onAuthenticate} disabled={isLoading}>
-              {isLoading ? <IonSpinner /> : 'Autenticar'}
-            </IonButton>
-          </IonButtons>
+        <IonToolbar style={{ '--background': '#dc2626' }}>
+          <IonTitle style={{ color: 'white', fontWeight: 'bold' }}>Mi Perfil</IonTitle>
         </IonToolbar>
       </IonHeader>
 
-      <IonContent scrollY>
-        {/* FAB de autenticación */}
-        <IonFab vertical="bottom" horizontal="end" slot="fixed">
-          <IonFabButton onClick={onAuthenticate} disabled={isLoading}>
-            {isLoading ? <IonSpinner /> : <IonIcon icon={fingerPrint} />}
-          </IonFabButton>
-        </IonFab>
+      <IonContent style={{ '--background': '#f1f5f9' }}>
+        {/* Header con foto de perfil */}
+        <div style={{
+          background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
+          padding: '40px 20px 80px',
+          textAlign: 'center',
+          position: 'relative',
+          marginBottom: '0'
+        }}>
+          <div style={{
+            position: 'relative',
+            display: 'inline-block',
+            marginBottom: '16px'
+          }}>
+            <IonAvatar style={{
+              width: '120px',
+              height: '120px',
+              margin: '0 auto',
+              border: '4px solid white',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)'
+            }}>
+              <img src={profile.trainerImage} alt="Trainer" />
+            </IonAvatar>
+            <div style={{
+              position: 'absolute',
+              bottom: '0',
+              right: '0',
+              backgroundColor: '#10b981',
+              borderRadius: '50%',
+              width: '36px',
+              height: '36px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              border: '3px solid white',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
+            }}>
+              <IonIcon icon={checkmarkCircle} style={{ fontSize: '20px', color: 'white' }} />
+            </div>
+          </div>
 
-        {/* Alerta para PWA */}
+          <h2 style={{
+            color: 'white',
+            fontSize: '28px',
+            fontWeight: 'bold',
+            marginBottom: '4px',
+            textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
+          }}>
+            {profile.name}
+          </h2>
+          
+          <IonChip style={{
+            '--background': 'rgba(255, 255, 255, 0.2)',
+            '--color': 'white',
+            fontWeight: '600',
+            backdropFilter: 'blur(10px)'
+          }}>
+            <IonIcon icon={person} />
+            <IonLabel>Entrenador Pokémon</IonLabel>
+          </IonChip>
+        </div>
+
+        {/* Información del perfil */}
+        <div style={{ padding: '0 16px', marginTop: '-50px', paddingBottom: '100px' }}>
+          <IonCard style={{
+            borderRadius: '20px',
+            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
+            backgroundColor: 'white',
+            overflow: 'hidden'
+          }}>
+            <IonCardHeader style={{ 
+              background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+              padding: '20px'
+            }}>
+              <IonCardTitle style={{ fontSize: '22px', color: 'white', fontWeight: 'bold' }}>
+                Información Personal
+              </IonCardTitle>
+            </IonCardHeader>
+            <IonCardContent style={{ padding: '0' }}>
+              <IonList style={{ background: 'white' }}>
+                <IonItem style={{ '--padding-start': '20px', '--padding-end': '20px', '--min-height': '70px' }}>
+                  <div style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '12px',
+                    backgroundColor: '#dbeafe',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginRight: '16px'
+                  }}>
+                    <IonIcon icon={person} style={{ fontSize: '24px', color: '#3b82f6' }} />
+                  </div>
+                  <IonLabel>
+                    <h3 style={{ fontWeight: '700', color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>Nombre</h3>
+                    <p style={{ fontSize: '18px', color: '#1e293b', fontWeight: '600', margin: 0 }}>{profile.name}</p>
+                  </IonLabel>
+                </IonItem>
+
+                <IonItem style={{ '--padding-start': '20px', '--padding-end': '20px', '--min-height': '70px' }}>
+                  <div style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '12px',
+                    backgroundColor: '#fee2e2',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginRight: '16px'
+                  }}>
+                    <IonIcon icon={mail} style={{ fontSize: '24px', color: '#ef4444' }} />
+                  </div>
+                  <IonLabel>
+                    <h3 style={{ fontWeight: '700', color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>Email</h3>
+                    <p style={{ fontSize: '16px', color: '#1e293b', fontWeight: '600', margin: 0 }}>{profile.email}</p>
+                  </IonLabel>
+                </IonItem>
+
+                <IonItem style={{ '--padding-start': '20px', '--padding-end': '20px', '--min-height': '70px' }}>
+                  <div style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '12px',
+                    backgroundColor: '#d1fae5',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginRight: '16px'
+                  }}>
+                    <IonIcon icon={call} style={{ fontSize: '24px', color: '#10b981' }} />
+                </div>
+                  <IonLabel>
+                    <h3 style={{ fontWeight: '700', color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>Teléfono</h3>
+                    <p style={{ fontSize: '16px', color: '#1e293b', fontWeight: '600', margin: 0 }}>{profile.phone}</p>
+                  </IonLabel>
+                </IonItem>
+
+                <IonItem style={{ '--padding-start': '20px', '--padding-end': '20px', '--min-height': '70px', '--border-color': 'transparent' }}>
+                  <div style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '12px',
+                    backgroundColor: profile.gender === 'male' ? '#dbeafe' : '#fce7f3',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginRight: '16px'
+                  }}>
+                    <IonIcon 
+                      icon={profile.gender === 'male' ? male : female} 
+                      style={{ fontSize: '24px', color: profile.gender === 'male' ? '#3b82f6' : '#ec4899' }} 
+                    />
+              </div>
+                  <IonLabel>
+                    <h3 style={{ fontWeight: '700', color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>Género</h3>
+                    <p style={{ fontSize: '18px', color: '#1e293b', fontWeight: '600', margin: 0 }}>
+                      {profile.gender === 'male' ? 'Masculino' : profile.gender === 'female' ? 'Femenino' : 'Otro'}
+                    </p>
+                  </IonLabel>
+                </IonItem>
+              </IonList>
+            </IonCardContent>
+          </IonCard>
+
+          {/* Botones de acción */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px', marginBottom: '20px' }}>
+            <IonButton
+              expand="block"
+              onClick={() => {
+                setEditProfile(profile);
+                setShowEditModal(true);
+              }}
+              style={{
+                '--background': 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                '--border-radius': '16px',
+                '--padding-top': '16px',
+                '--padding-bottom': '16px',
+                '--box-shadow': '0 6px 20px rgba(59, 130, 246, 0.4)',
+                fontSize: '17px',
+                fontWeight: 'bold',
+                height: '56px'
+              }}
+            >
+              <IonIcon icon={create} slot="start" style={{ fontSize: '22px' }} />
+              Editar Perfil
+            </IonButton>
+
+            <IonButton
+              expand="block"
+              onClick={handleLogout}
+              style={{
+                '--background': 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                '--border-radius': '16px',
+                '--padding-top': '16px',
+                '--padding-bottom': '16px',
+                '--box-shadow': '0 6px 20px rgba(239, 68, 68, 0.4)',
+                fontSize: '17px',
+                fontWeight: 'bold',
+                height: '56px'
+              }}
+            >
+              <IonIcon icon={logOut} slot="start" style={{ fontSize: '22px' }} />
+              Cerrar Sesión
+            </IonButton>
+          </div>
+
+        </div>
+
+        {/* Modal de edición */}
+        <IonModal isOpen={showEditModal} onDidDismiss={() => setShowEditModal(false)}>
+          <IonHeader>
+            <IonToolbar>
+              <IonTitle>Editar Perfil</IonTitle>
+              <IonButton slot="end" fill="clear" onClick={handleCancelEdit}>
+                <IonIcon icon={close} />
+              </IonButton>
+            </IonToolbar>
+          </IonHeader>
+          <IonContent>
+            <div style={{ padding: '20px' }}>
+              {/* Cambiar foto */}
+              <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                <IonAvatar style={{
+                  width: '100px',
+                  height: '100px',
+                  margin: '0 auto 16px',
+                  border: '3px solid #dc2626'
+                }}>
+                  <img src={editProfile.trainerImage} alt="Trainer" />
+                </IonAvatar>
+                <IonButton size="small" fill="outline" onClick={changeTrainerImage}>
+                  <IonIcon icon={camera} slot="start" />
+                  Cambiar Imagen
+                </IonButton>
+              </div>
+
+              {/* Formulario */}
+              <IonList>
+          <IonItem>
+                  <IonLabel position="stacked">
+                    <IonIcon icon={person} style={{ marginRight: '8px' }} />
+                    Nombre
+                    </IonLabel>
+                  <IonInput
+                    value={editProfile.name}
+                    onIonInput={(e) => setEditProfile({ ...editProfile, name: e.detail.value! })}
+                    placeholder="Tu nombre"
+                  />
+                  </IonItem>
+                  
+          <IonItem>
+                  <IonLabel position="stacked">
+                    <IonIcon icon={mail} style={{ marginRight: '8px' }} />
+                    Email
+                    </IonLabel>
+                  <IonInput
+                    type="email"
+                    value={editProfile.email}
+                    onIonInput={(e) => setEditProfile({ ...editProfile, email: e.detail.value! })}
+                    placeholder="tu@email.com"
+                  />
+                  </IonItem>
+                  
+          <IonItem>
+                  <IonLabel position="stacked">
+                    <IonIcon icon={call} style={{ marginRight: '8px' }} />
+                    Teléfono
+                    </IonLabel>
+                  <IonInput
+                    type="tel"
+                    value={editProfile.phone}
+                    onIonInput={(e) => setEditProfile({ ...editProfile, phone: e.detail.value! })}
+                    placeholder="+52 123 456 7890"
+                  />
+                  </IonItem>
+                  
+            <IonItem>
+                    <IonLabel>
+                    <IonIcon icon={editProfile.gender === 'male' ? male : female} style={{ marginRight: '8px' }} />
+                    Género
+                    </IonLabel>
+                  <IonSelect
+                    value={editProfile.gender}
+                    onIonChange={(e) => setEditProfile({ ...editProfile, gender: e.detail.value })}
+                    interface="action-sheet"
+                  >
+                    <IonSelectOption value="male">Masculino</IonSelectOption>
+                    <IonSelectOption value="female">Femenino</IonSelectOption>
+                    <IonSelectOption value="other">Otro</IonSelectOption>
+                  </IonSelect>
+                  </IonItem>
+        </IonList>
+
+              {/* Botones del modal */}
+              <div style={{ padding: '20px 0', display: 'flex', gap: '12px' }}>
+                <IonButton
+                  expand="block"
+                  fill="outline"
+                  onClick={handleCancelEdit}
+                  style={{ flex: 1 }}
+                >
+                  <IonIcon icon={close} slot="start" />
+                  Cancelar
+                </IonButton>
+                    <IonButton 
+            expand="block" 
+                  onClick={handleSaveProfile}
+                  style={{ flex: 1 }}
+                  color="success"
+                >
+                  <IonIcon icon={saveOutline} slot="start" />
+                  Guardar
+                    </IonButton>
+              </div>
+        </div>
+          </IonContent>
+        </IonModal>
+
+        {/* Alerta de cierre de sesión */}
         <IonAlert
-          isOpen={showPWAAlert}
-          onDidDismiss={() => setShowPWAAlert(false)}
-          header="Biometría No Disponible en PWA"
-          message="La autenticación biométrica completa solo está disponible en la aplicación nativa. Usa WebAuthn como alternativa."
+          isOpen={showLogoutAlert}
+          onDidDismiss={() => setShowLogoutAlert(false)}
+          header="Cerrar Sesión"
+          message="¿Estás seguro que deseas cerrar sesión?"
           buttons={[
             {
-              text: 'Entendido',
+              text: 'Cancelar',
               role: 'cancel'
+            },
+            {
+              text: 'Cerrar Sesión',
+              role: 'destructive',
+              handler: confirmLogout
             }
           ]}
         />
-
-        {/* Tarjeta informativa para PWA/Web */}
-        {(isPWA || !isNative) && (
-          <IonCard color={passkeyCreated ? "success" : "warning"}>
-            <IonCardContent>
-              <div className="flex items-start">
-                <IonIcon icon={warning} className="text-2xl mr-3 mt-1" />
-                <div>
-                  <h2 className="font-bold text-lg">
-                    {passkeyCreated ? 'WebAuthn Configurado' : 'Versión PWA/Navegador'}
-                  </h2>
-                  <p className="mt-2">
-                    {passkeyCreated 
-                      ? 'Passkey creado exitosamente. Puedes autenticarte con biometría web.'
-                      : 'Usa WebAuthn como alternativa a la biometría nativa:'
-                    }
-                  </p>
-                  <ul className="list-disc list-inside mt-2 space-y-1">
-                    <li>La biometría nativa no está disponible</li>
-                    <li>WebAuthn permite autenticación biométrica en navegador</li>
-                    <li>Usa el botón de abajo para crear o verificar tu passkey</li>
-                  </ul>
-                </div>
-              </div>
-            </IonCardContent>
-          </IonCard>
-        )}
-
-        {/* Tarjeta para app nativa */}
-        {isNative && biometry.isAvailable && (
-          <IonCard color="success">
-            <IonCardContent>
-              <div className="flex items-start">
-                <IonIcon icon={phonePortrait} className="text-2xl mr-3 mt-1" />
-                <div>
-                  <h2 className="font-bold text-lg">App Nativa Detectada</h2>
-                  <p className="mt-2">Todas las funciones biométricas están disponibles</p>
-                </div>
-              </div>
-            </IonCardContent>
-          </IonCard>
-        )}
-
-        <IonList lines="full" className="mt-4">
-          {/* Información de plataforma */}
-          <IonItem>
-                    <IonLabel>
-              <h3>Plataforma</h3>
-              <p>{platform} - {isNative ? 'Nativa' : isPWA ? 'PWA' : 'Navegador'}</p>
-                    </IonLabel>
-                  </IonItem>
-                  
-          {/* Estado de permisos */}
-          <IonItem>
-                    <IonLabel>
-              <h3>Estado de Permisos</h3>
-              <p>{permissionStatus}</p>
-                    </IonLabel>
-            <IonButton 
-              slot="end" 
-              fill="outline" 
-              onClick={checkBiometricAvailability}
-              disabled={isLoading}
-            >
-              {isLoading ? <IonSpinner /> : 'Actualizar'}
-            </IonButton>
-                  </IonItem>
-                  
-          {/* Biometría disponible */}
-          <IonItem>
-                    <IonLabel>
-              <h3>Biometría Disponible</h3>
-              <p>
-                {isNative 
-                  ? (biometry.isAvailable ? biometryName : 'No disponible')
-                  : (passkeyCreated ? 'WebAuthn configurado' : 'WebAuthn disponible')
-                }
-              </p>
-                    </IonLabel>
-            <IonText slot="end" color={
-              isNative 
-                ? (biometry.isAvailable ? "success" : "danger")
-                : (passkeyCreated ? "success" : "warning")
-            }>
-              {isNative 
-                ? (biometry.isAvailable ? 'Sí' : 'No')
-                : (passkeyCreated ? 'Configurado' : 'Disponible')
-              }
-            </IonText>
-                  </IonItem>
-                  
-          {/* Razón/Detalles */}
-          {biometry.reason && (
-            <IonItem>
-                    <IonLabel>
-                <h3>Detalles</h3>
-                <p>{biometry.reason}</p>
-                    </IonLabel>
-                  </IonItem>
-          )}
-                  
-          {/* Mensaje de estado */}
-          {message && (
-            <IonItem>
-                    <IonLabel>
-                <h3>Estado Actual</h3>
-                <p>{message}</p>
-                    </IonLabel>
-                  </IonItem>
-          )}
-
-          {/* Instrucciones para nativa */}
-          {isNative && !biometry.isAvailable && (
-            <IonItem color="light">
-              <IonLabel className="ion-text-wrap">
-                <h3>Configuración Requerida</h3>
-                <p>Para habilitar la biometría:</p>
-                <ul className="list-disc list-inside mt-1">
-                  <li>Ve a Ajustes de tu dispositivo</li>
-                  <li>Configura {platform === 'ios' ? 'Face ID/Touch ID' : 'Huella digital'}</li>
-                  <li>Reinicia la aplicación</li>
-                </ul>
-              </IonLabel>
-                  </IonItem>
-          )}
-        </IonList>
-
-        {/* Botón de acción principal */}
-        <div className="p-4">
-                    <IonButton 
-            expand="block" 
-            onClick={onAuthenticate}
-            disabled={isLoading || (!isNative && !isPWA)}
-            size="large"
-            className="ion-margin-top"
-          >
-            {isLoading ? (
-              <>
-                <IonSpinner slot="start" />
-                {isNative ? 'Autenticando...' : (passkeyCreated ? 'Verificando...' : 'Creando...')}
-              </>
-            ) : (
-              <>
-                <IonIcon icon={fingerPrint} slot="start" />
-                {isNative 
-                  ? 'Autenticar con Biometría' 
-                  : (passkeyCreated ? 'Autenticar con WebAuthn' : 'Crear Passkey')
-                }
-              </>
-            )}
-                    </IonButton>
-
-        </div>
       </IonContent>
     </IonPage>
   );

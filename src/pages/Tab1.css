@@ -734,3 +734,76 @@
 .entry-image {
   will-change: transform;
 }
+
+/* Modal de detalles del Pokémon */
+.pokemon-details-modal {
+  --width: 90%;
+  --max-width: 600px;
+  --height: 90%;
+  --border-radius: 20px;
+}
+
+.pokemon-details-modal ion-content {
+  --background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.pokemon-details-modal ion-card {
+  margin: 16px 0;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.pokemon-details-modal ion-card-title {
+  font-size: 20px;
+  font-weight: bold;
+  color: #1e293b;
+}
+
+/* Cursor pointer para items clickeables */
+.pokedex-item[button] {
+  cursor: pointer;
+}
+
+.pokedex-item[button]:hover {
+  --background: rgba(16, 185, 129, 0.05);
+}
+
+/* Estilos para el selector de tipos */
+.type-filter-select {
+  min-height: 50px;
+  font-size: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.type-filter-select::part(text) {
+  color: #1e293b !important;
+  font-weight: 600;
+}
+
+.type-filter-select::part(placeholder) {
+  color: #64748b !important;
+  opacity: 1;
+}
+
+.type-filter-select::part(icon) {
+  color: #64748b !important;
+  opacity: 1;
+}
+
+/* Sección de filtro mejorada */
+.filter-section {
+  width: 100%;
+  padding: 0 20px;
+  margin-bottom: 10px;
+}
+
+/* Action sheet items styling */
+ion-action-sheet {
+  --button-color: #1e293b;
+  --button-color-selected: #10b981;
+}
+
+ion-action-sheet .action-sheet-button {
+  font-size: 16px !important;
+  font-weight: 500;
+}

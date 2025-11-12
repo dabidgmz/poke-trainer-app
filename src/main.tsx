@@ -1,126 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
-
-// Extender el tipo Window para incluir propiedades PWA
-declare global {
-  interface Window {
-    MSStream?: any;
-  }
-  
-  interface Navigator {
-    standalone?: boolean;
-  }
-}
-
-
-const InstallPWAButton: React.FC = () => {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showButton, setShowButton] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);
-
-  useEffect(() => {
-    // Detectar iOS
-    const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    setIsIOS(iOS);
-
-    // Detectar si ya está instalada
-    const standalone = window.matchMedia('(display-mode: standalone)').matches;
-    setIsStandalone(standalone);
-
-    // Detectar si ya está instalada (iOS)
-    const iOSInstalled = window.navigator.standalone === true;
-    
-    // Mostrar botón si no está instalada
-    if (!standalone && !iOSInstalled) {
-      setShowButton(true);
-    }
-
-    // Evento beforeinstallprompt (Android/Desktop)
-    const handler = (e: any) => {
-      console.log('beforeinstallprompt triggered!', e);
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setShowButton(true);
-    };
-    
-    window.addEventListener('beforeinstallprompt', handler);
-    
-    // También escuchar el evento appinstalled
-    const installedHandler = () => {
-      console.log('App installed successfully!');
-      setShowButton(false);
-    };
-    window.addEventListener('appinstalled', installedHandler);
-    
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handler);
-      window.removeEventListener('appinstalled', installedHandler);
-    };
-  }, []);
-
-  const handleInstall = async () => {
-    if (deferredPrompt) {
-      // Android/Desktop - usar prompt nativo
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setShowButton(false);
-        setDeferredPrompt(null);
-      }
-    } else if (isIOS) {
-      // iOS - mostrar instrucciones
-      alert('Para instalar esta app en iOS:\n1. Toca el botón Compartir (📤)\n2. Selecciona "Agregar a pantalla de inicio"\n3. Toca "Agregar"');
-    }
-  };
-
-  if (!showButton || isStandalone) return null;
-  
-  return (
-    <button
-      style={{
-        position: 'fixed',
-        bottom: 24,
-        right: 24,
-        zIndex: 1000,
-        padding: '12px 20px',
-        background: '#3b82f6',
-        color: '#fff',
-        border: 'none',
-        borderRadius: 24,
-        fontSize: 14,
-        fontWeight: '600',
-        boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        transition: 'all 0.3s ease',
-      }}
-      onClick={handleInstall}
-      onMouseOver={(e) => {
-        e.currentTarget.style.background = '#2563eb';
-        e.currentTarget.style.transform = 'translateY(-2px)';
-      }}
-      onMouseOut={(e) => {
-        e.currentTarget.style.background = '#3b82f6';
-        e.currentTarget.style.transform = 'translateY(0)';
-      }}
-    >
-      📱 {isIOS ? 'Instalar en iOS' : 'Instalar App'}
-    </button>
-  );
-};
 
 const container = document.getElementById('root');
 const root = createRoot(container!);
 root.render(
   <React.StrictMode>
-    <>
-      <App />
-      <InstallPWAButton />
-    </>
+    <App />
   </React.StrictMode>
 );
 

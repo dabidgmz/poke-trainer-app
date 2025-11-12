@@ -32,7 +32,12 @@ import {
   swapHorizontal,
   add,
   folder,
-  fingerPrint
+  fingerPrint,
+  lockClosed,
+  lockOpen,
+  keyOutline,
+  scan,
+  checkmarkCircle
 } from 'ionicons/icons';
 import { alertController } from '@ionic/core';
 import { Capacitor } from '@capacitor/core';
@@ -607,45 +612,178 @@ const Tab3: React.FC = () => {
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen className="pc-content">
-        {/* Botón de acceso biométrico */}
+        {/* Pantalla de acceso biométrico mejorada */}
         {!isAuthenticated && (
-          <div className="biometric-access-container">
-            <div className="biometric-access-card">
-              <div className="biometric-icon">
-                <IonIcon icon={fingerPrint} />
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: 'calc(100vh - 120px)',
+            padding: '20px'
+          }}>
+            {/* Candado animado */}
+            <div style={{
+              position: 'relative',
+              marginBottom: '30px'
+            }}>
+              <div style={{
+                width: '120px',
+                height: '120px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                boxShadow: '0 10px 40px rgba(220, 53, 69, 0.4)',
+                animation: 'pulse 2s ease-in-out infinite'
+              }}>
+                <IonIcon 
+                  icon={lockClosed} 
+                  style={{ 
+                    fontSize: '60px', 
+                    color: 'white'
+                  }} 
+                />
               </div>
-              <h2 className="biometric-title">ACCESO BIOMÉTRICO</h2>
-              <p className="biometric-description">
+              <div style={{
+                position: 'absolute',
+                top: '-10px',
+                right: '-10px',
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                backgroundColor: '#10b981',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)'
+              }}>
+                <IonIcon 
+                  icon={scan} 
+                  style={{ fontSize: '24px', color: 'white' }} 
+                />
+              </div>
+            </div>
+
+            {/* Tarjeta de acceso */}
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '24px',
+              padding: '32px 24px',
+              maxWidth: '400px',
+              width: '100%',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.2)',
+              textAlign: 'center'
+            }}>
+              <h2 style={{
+                fontSize: '28px',
+                fontWeight: 'bold',
+                color: '#1e293b',
+                marginBottom: '12px',
+                letterSpacing: '0.5px'
+              }}>
+                ACCESO SEGURO
+              </h2>
+              
+              <p style={{
+                fontSize: '15px',
+                color: '#64748b',
+                marginBottom: '24px',
+                lineHeight: '1.6'
+              }}>
                 {isNative 
-                  ? 'Use su biometría para acceder al POKÉMON PC'
-                  : (passkeyCreated 
-                      ? 'Passkey configurado. Use WebAuthn para acceder al POKÉMON PC'
-                      : 'Use WebAuthn para crear un passkey y acceder al POKÉMON PC'
-                    )
+                  ? 'Usa tu huella digital, Face ID o reconocimiento facial para acceder al POKÉMON PC de forma segura'
+                  : 'Usa autenticación biométrica de tu navegador para acceder al POKÉMON PC de forma segura'
                 }
               </p>
+
+              {/* Características de seguridad */}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                marginBottom: '24px',
+                backgroundColor: '#f8fafc',
+                padding: '16px',
+                borderRadius: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <IonIcon icon={lockClosed} style={{ fontSize: '24px', color: '#10b981' }} />
+                  <span style={{ fontSize: '14px', color: '#475569', textAlign: 'left' }}>
+                    Acceso encriptado y seguro
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <IonIcon icon={fingerPrint} style={{ fontSize: '24px', color: '#10b981' }} />
+                  <span style={{ fontSize: '14px', color: '#475569', textAlign: 'left' }}>
+                    {isNative ? 'Biometría nativa del dispositivo' : 'Autenticación del navegador'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <IonIcon icon={checkmarkCircle} style={{ fontSize: '24px', color: '#10b981' }} />
+                  <span style={{ fontSize: '14px', color: '#475569', textAlign: 'left' }}>
+                    Protege tus Pokémon almacenados
+                  </span>
+                </div>
+              </div>
+
+              {/* Botón de acceso */}
               <IonButton 
-                className="biometric-button"
                 onClick={authenticateBiometric}
                 disabled={isLoading}
                 expand="block"
                 size="large"
+                style={{
+                  '--background': 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                  '--background-hover': '#dc2626',
+                  '--background-activated': '#b91c1c',
+                  '--border-radius': '16px',
+                  '--padding-top': '16px',
+                  '--padding-bottom': '16px',
+                  '--box-shadow': '0 8px 24px rgba(220, 53, 69, 0.4)',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px'
+                }}
               >
                 {isLoading ? (
                   <>
-                    <IonSpinner slot="start" />
-                    {isNative ? 'Autenticando...' : (passkeyCreated ? 'Verificando...' : 'Creando...')}
+                    <IonSpinner slot="start" style={{ color: 'white' }} />
+                    <span>Verificando...</span>
                   </>
                 ) : (
                   <>
-                    <IonIcon icon={fingerPrint} slot="start" />
-                    {isNative 
-                      ? 'Acceder con Biometría' 
-                      : (passkeyCreated ? 'Acceder con WebAuthn' : 'Crear Passkey')
-                    }
+                    <IonIcon icon={scan} slot="start" style={{ fontSize: '24px' }} />
+                    <span>Usar Acceso Biométrico</span>
                   </>
                 )}
               </IonButton>
+
+              {/* Nota informativa */}
+              <div style={{
+                marginTop: '16px',
+                padding: '12px',
+                backgroundColor: '#fef3c7',
+                borderRadius: '8px',
+                border: '1px solid #fde68a'
+              }}>
+                <p style={{
+                  fontSize: '12px',
+                  color: '#92400e',
+                  margin: 0,
+                  lineHeight: '1.5'
+                }}>
+                  <IonIcon icon={keyOutline} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                  {isNative 
+                    ? 'Configura la biometría en los ajustes de tu dispositivo si aún no lo has hecho'
+                    : passkeyCreated 
+                      ? 'Autenticación configurada. Toca el botón para verificar.'
+                      : 'Primera vez: Se creará tu acceso seguro automáticamente'
+                  }
+                </p>
+              </div>
             </div>
           </div>
         )}
