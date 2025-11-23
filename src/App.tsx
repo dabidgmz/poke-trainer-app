@@ -16,13 +16,15 @@ import {
   people, 
   desktop, 
   camera,
-  person
+  person,
+  flashlight
 } from 'ionicons/icons';
 import Tab1 from './pages/Tab1';
 import Tab2 from './pages/Tab2';
 import Tab3 from './pages/Tab3';
 import Tab4 from './pages/Tab4';
 import Tab5 from './pages/Tab5';
+import Tab6 from './pages/Tab6';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import VerifyCode from './pages/VerifyCode';
@@ -114,6 +116,9 @@ const AppContent: React.FC = () => {
               <Route path="/tab5">
                 <Tab5 />
               </Route>
+              <Route path="/tab6">
+                <Tab6 />
+              </Route>
               <Route exact path="/">
                 <Redirect to="/tab1" />
               </Route>
@@ -135,9 +140,9 @@ const AppContent: React.FC = () => {
                 <IonIcon aria-hidden="true" icon={camera} />
                 <IonLabel>Capturar</IonLabel>
               </IonTabButton>
-              <IonTabButton tab="tab5" href="/tab5">
-                <IonIcon aria-hidden="true" icon={person} />
-                <IonLabel>Perfil</IonLabel>
+              <IonTabButton tab="tab6" href="/tab6">
+                <IonIcon aria-hidden="true" icon={flashlight} />
+                <IonLabel>Linterna</IonLabel>
               </IonTabButton>
             </IonTabBar>
           </IonTabs>

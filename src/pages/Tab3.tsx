@@ -46,6 +46,7 @@ import { SplashScreen } from '@capacitor/splash-screen';
 import { NativeBiometric, BiometryType } from '@capgo/capacitor-native-biometric';
 import { useHistory } from 'react-router-dom';
 import authService from '../services/authService';
+import ProfileButton from '../components/ProfileButton';
 import './Tab3.css';
 
 interface Pokemon {
@@ -633,6 +634,7 @@ const Tab3: React.FC = () => {
               <span className="pc-text">POKÉMON PC</span>
             </div>
           </IonTitle>
+          <ProfileButton />
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen className="pc-content">

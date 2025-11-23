@@ -1,0 +1,17 @@
+.profile-button {
+  --color: white;
+  --padding-start: 8px;
+  --padding-end: 8px;
+}
+
+.profile-button-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.profile-button-text {
+  font-size: 14px;
+  font-weight: 500;
+}
+

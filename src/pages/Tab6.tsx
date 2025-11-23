@@ -18,6 +18,7 @@ import {
   navigate
 } from 'ionicons/icons';
 import { Torch } from '@capawesome/capacitor-torch';
+import ProfileButton from '../components/ProfileButton';
 import './Tab6.css';
 
 // Hook personalizado para la linterna usando getUserMedia (basado en Vue)
@@ -413,6 +414,7 @@ const Tab6: React.FC = () => {
       <IonHeader>
         <IonToolbar>
           <IonTitle>Linterna</IonTitle>
+          <ProfileButton />
         </IonToolbar>
       </IonHeader>
 

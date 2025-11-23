@@ -24,6 +24,7 @@ import {
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import authService from '../services/authService';
+import ProfileButton from '../components/ProfileButton';
 import './Tab2.css';
 
 interface Pokemon {
@@ -183,6 +184,7 @@ const Tab2: React.FC = () => {
               <span className="team-text">MY TEAM</span>
             </div>
           </IonTitle>
+          <ProfileButton />
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen className="team-content">

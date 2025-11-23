@@ -30,6 +30,7 @@ import {
   IonCol
 } from '@ionic/react';
 import { search, filter, refresh, searchCircle, close, flame, shield, heart, speedometer, star } from 'ionicons/icons';
+import ProfileButton from '../components/ProfileButton';
 import './Tab1.css';
 
 interface PokemonDetails {
@@ -237,6 +238,7 @@ const Pokedex: React.FC = () => {
               </div>
             </div>
           </IonTitle>
+          <ProfileButton />
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen className="pokedex-content">

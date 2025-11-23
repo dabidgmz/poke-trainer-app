@@ -40,6 +40,7 @@ import { CameraUtils } from '../utils/cameraUtils';
 import authService from '../services/authService';
 import { useHistory } from 'react-router-dom';
 import { alertController } from '@ionic/core';
+import ProfileButton from '../components/ProfileButton';
 import './Tab4.css';
 
 interface CapturedPokemon {
@@ -547,6 +548,7 @@ const Tab4: React.FC = () => {
               <span className="capture-text">POKÉMON CAPTURE</span>
             </div>
           </IonTitle>
+          <ProfileButton />
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen className="capture-content">
