@@ -133,24 +133,93 @@ class AuthService {
   }
 
   async getTeam(): Promise<{ team: any[]; teamCount: number; maxTeamSize: number }> {
-    const response = await fetch(`${API_BASE_URL}/entrenadores/me/team`, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/entrenadores/me/team`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
 
-    if (!response.ok) {
-      if (response.status === 401) {
-        this.removeToken();
-        throw new Error('No autenticado');
+      if (!response.ok) {
+        if (response.status === 401) {
+          this.removeToken();
+          throw new Error('No autenticado');
+        }
+        if (response.status === 403) {
+          throw new Error('Este endpoint es solo para entrenadores');
+        }
+        const error = await response.json().catch(() => ({ message: 'Error al obtener el equipo' }));
+        throw new Error(error.message || 'Error al obtener el equipo');
       }
-      if (response.status === 403) {
-        throw new Error('Este endpoint es solo para entrenadores');
+
+      return response.json();
+    } catch (error: any) {
+      if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+        throw new Error(`No se pudo conectar con la API. Verifica que el servidor esté corriendo en ${API_BASE_URL}`);
       }
-      const error = await response.json();
-      throw new Error(error.message || 'Error al obtener el equipo');
+      throw error;
     }
+  }
 
-    return response.json();
+  async getPC(): Promise<{ box1: any[]; box2: any[]; box3: any[]; counts: { box1: number; box2: number; box3: number; total: number } }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/entrenadores/me/pc`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          this.removeToken();
+          throw new Error('No autenticado');
+        }
+        if (response.status === 403) {
+          throw new Error('Este endpoint es solo para entrenadores');
+        }
+        const error = await response.json().catch(() => ({ message: 'Error al obtener el PC' }));
+        throw new Error(error.message || 'Error al obtener el PC');
+      }
+
+      return response.json();
+    } catch (error: any) {
+      if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+        throw new Error(`No se pudo conectar con la API. Verifica que el servidor esté corriendo en ${API_BASE_URL}`);
+      }
+      throw error;
+    }
+  }
+
+  async movePokemon(pokemonId: number, location: 'team' | 'pc', pcBox?: number): Promise<{ message: string; pokemon: any }> {
+    try {
+      const body: any = { location };
+      if (location === 'pc' && pcBox) {
+        body.pcBox = pcBox;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/entrenadores/me/pokemon/${pokemonId}/move`, {
+        method: 'PATCH',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          this.removeToken();
+          throw new Error('No autenticado');
+        }
+        if (response.status === 403) {
+          throw new Error('Este endpoint es solo para entrenadores');
+        }
+        const error = await response.json().catch(() => ({ message: 'Error al mover el Pokémon' }));
+        throw new Error(error.message || 'Error al mover el Pokémon');
+      }
+
+      return response.json();
+    } catch (error: any) {
+      if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+        throw new Error(`No se pudo conectar con la API. Verifica que el servidor esté corriendo en ${API_BASE_URL}`);
+      }
+      throw error;
+    }
   }
 
   async updateProfile(id: number, data: UpdateProfileData): Promise<{ message: string; entrenador: User }> {

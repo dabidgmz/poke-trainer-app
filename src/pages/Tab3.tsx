@@ -19,7 +19,8 @@ import {
   IonSegmentButton,
   IonLabel,
   IonSpinner,
-  IonAlert
+  IonAlert,
+  IonText
 } from '@ionic/react';
 import { 
   ReorderEndCustomEvent 
@@ -43,6 +44,8 @@ import { alertController } from '@ionic/core';
 import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { NativeBiometric, BiometryType } from '@capgo/capacitor-native-biometric';
+import { useHistory } from 'react-router-dom';
+import authService from '../services/authService';
 import './Tab3.css';
 
 interface Pokemon {
@@ -58,6 +61,7 @@ interface Pokemon {
   img: string;
   location: 'team' | 'pc';
   boxId?: number;
+  instanceId?: number; // ID de la instancia del Pokémon en la API
 }
 
 interface Box {
@@ -66,184 +70,145 @@ interface Box {
   pokemon: Pokemon[];
 }
 
+interface TeamMember {
+  id: number;
+  pokemon: {
+    id: number;
+    pokeapiId: number;
+    name: string;
+    spriteUrl: string;
+    types: string[];
+    height: number;
+    weight: number;
+  };
+  nickname: string | null;
+  level: number;
+  location: string;
+  createdAt: string;
+}
+
+interface PCMember extends TeamMember {
+  pcBox: number;
+}
+
 const Tab3: React.FC = () => {
+  const history = useHistory();
   const [currentView, setCurrentView] = useState<'team' | 'pc'>('team');
   const [selectedBox, setSelectedBox] = useState(0);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(true); // Cambiado a true para pruebas
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(false);
   const [biometryAvailable, setBiometryAvailable] = useState(false);
   const [showBiometricAlert, setShowBiometricAlert] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [teamInfo, setTeamInfo] = useState<{ teamCount: number; maxTeamSize: number } | null>(null);
   
-  const [pokemonTeam, setPokemonTeam] = useState<Pokemon[]>([
-    {
-      id: 1,
-      name: 'Pikachu',
-      type: 'electric',
-      level: 25,
-      hp: 85,
-      maxHp: 85,
-      attack: 55,
-      defense: 40,
-      speed: 90,
-      img: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png',
-      location: 'team'
-    },
-    {
-      id: 2,
-      name: 'Charizard',
-      type: 'fire',
-      level: 36,
-      hp: 120,
-      maxHp: 120,
-      attack: 84,
-      defense: 78,
-      speed: 100,
-      img: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/6.png',
-      location: 'team'
-    },
-    {
-      id: 3,
-      name: 'Blastoise',
-      type: 'water',
-      level: 36,
-      hp: 130,
-      maxHp: 130,
-      attack: 83,
-      defense: 100,
-      speed: 78,
-      img: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/9.png',
-      location: 'team'
-    },
-    {
-      id: 4,
-      name: 'Venusaur',
-      type: 'grass',
-      level: 36,
-      hp: 125,
-      maxHp: 125,
-      attack: 82,
-      defense: 83,
-      speed: 80,
-      img: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/3.png',
-      location: 'team'
-    },
-    {
-      id: 5,
-      name: 'Dragonite',
-      type: 'dragon',
-      level: 55,
-      hp: 150,
-      maxHp: 150,
-      attack: 134,
-      defense: 95,
-      speed: 80,
-      img: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/149.png',
-      location: 'team'
-    },
-    {
-      id: 6,
-      name: 'Mewtwo',
-      type: 'psychic',
-      level: 70,
-      hp: 180,
-      maxHp: 180,
-      attack: 110,
-      defense: 90,
-      speed: 130,
-      img: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/150.png',
-      location: 'team'
-    }
+  const [pokemonTeam, setPokemonTeam] = useState<Pokemon[]>([]);
+  const [pcBoxes, setPcBoxes] = useState<Box[]>([
+    { id: 0, name: 'Box 1', pokemon: [] },
+    { id: 1, name: 'Box 2', pokemon: [] },
+    { id: 2, name: 'Box 3', pokemon: [] }
   ]);
 
-  const [pcBoxes, setPcBoxes] = useState<Box[]>([
-    {
-      id: 0,
-      name: 'Box 1',
-      pokemon: [
+  // Función para calcular stats basados en el nivel
+  const calculateStats = (level: number, baseStat: number = 50) => {
+    return Math.floor(baseStat * (1 + (level - 1) * 0.1));
+  };
+
+  // Mapear datos de la API al formato del componente
+  const mapTeamMemberToPokemon = (member: TeamMember): Pokemon => {
+    const primaryType = member.pokemon.types[0] || 'normal';
+    const level = member.level;
+    const baseHp = 50 + (level * 5);
+    const baseAttack = 40 + (level * 3);
+    const baseDefense = 40 + (level * 3);
+    const baseSpeed = 40 + (level * 3);
+
+    return {
+      id: member.id,
+      instanceId: member.id,
+      name: member.nickname || member.pokemon.name.charAt(0).toUpperCase() + member.pokemon.name.slice(1),
+      type: primaryType,
+      level: level,
+      hp: baseHp,
+      maxHp: baseHp,
+      attack: baseAttack,
+      defense: baseDefense,
+      speed: baseSpeed,
+      img: member.pokemon.spriteUrl,
+      location: 'team'
+    };
+  };
+
+  const mapPCMemberToPokemon = (member: PCMember, boxIndex: number): Pokemon => {
+    const primaryType = member.pokemon.types[0] || 'normal';
+    const level = member.level;
+    const baseHp = 50 + (level * 5);
+    const baseAttack = 40 + (level * 3);
+    const baseDefense = 40 + (level * 3);
+    const baseSpeed = 40 + (level * 3);
+
+    return {
+      id: member.id,
+      instanceId: member.id,
+      name: member.nickname || member.pokemon.name.charAt(0).toUpperCase() + member.pokemon.name.slice(1),
+      type: primaryType,
+      level: level,
+      hp: baseHp,
+      maxHp: baseHp,
+      attack: baseAttack,
+      defense: baseDefense,
+      speed: baseSpeed,
+      img: member.pokemon.spriteUrl,
+      location: 'pc',
+      boxId: boxIndex
+    };
+  };
+
+  // Cargar datos del equipo y PC
+  const loadData = async () => {
+    setIsLoadingData(true);
+    setError(null);
+    
+    try {
+      // Cargar equipo
+      const teamResponse = await authService.getTeam();
+      const mappedTeam = teamResponse.team.map(mapTeamMemberToPokemon);
+      setPokemonTeam(mappedTeam);
+      setTeamInfo({
+        teamCount: teamResponse.teamCount,
+        maxTeamSize: teamResponse.maxTeamSize
+      });
+
+      // Cargar PC
+      const pcResponse = await authService.getPC();
+      const boxes: Box[] = [
         {
-          id: 7,
-          name: 'Bulbasaur',
-          type: 'grass',
-          level: 5,
-          hp: 45,
-          maxHp: 45,
-          attack: 49,
-          defense: 49,
-          speed: 45,
-          img: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png',
-          location: 'pc',
-          boxId: 0
+          id: 0,
+          name: 'Box 1',
+          pokemon: pcResponse.box1.map(m => mapPCMemberToPokemon(m as PCMember, 0))
         },
         {
-          id: 8,
-          name: 'Squirtle',
-          type: 'water',
-          level: 5,
-          hp: 44,
-          maxHp: 44,
-          attack: 48,
-          defense: 65,
-          speed: 43,
-          img: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/7.png',
-          location: 'pc',
-          boxId: 0
+          id: 1,
+          name: 'Box 2',
+          pokemon: pcResponse.box2.map(m => mapPCMemberToPokemon(m as PCMember, 1))
         },
         {
-          id: 9,
-          name: 'Charmander',
-          type: 'fire',
-          level: 5,
-          hp: 39,
-          maxHp: 39,
-          attack: 52,
-          defense: 43,
-          speed: 65,
-          img: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/4.png',
-          location: 'pc',
-          boxId: 0
+          id: 2,
+          name: 'Box 3',
+          pokemon: pcResponse.box3.map(m => mapPCMemberToPokemon(m as PCMember, 2))
         }
-      ]
-    },
-    {
-      id: 1,
-      name: 'Box 2',
-      pokemon: [
-        {
-          id: 10,
-          name: 'Pidgey',
-          type: 'flying',
-          level: 3,
-          hp: 40,
-          maxHp: 40,
-          attack: 45,
-          defense: 40,
-          speed: 56,
-          img: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/16.png',
-          location: 'pc',
-          boxId: 1
-        },
-        {
-          id: 11,
-          name: 'Rattata',
-          type: 'normal',
-          level: 2,
-          hp: 30,
-          maxHp: 30,
-          attack: 56,
-          defense: 35,
-          speed: 72,
-          img: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/19.png',
-          location: 'pc',
-          boxId: 1
-        }
-      ]
-    },
-    {
-      id: 2,
-      name: 'Box 3',
-      pokemon: []
+      ];
+      setPcBoxes(boxes);
+    } catch (err: any) {
+      setError(err.message || 'Error al cargar los datos');
+      if (err.message === 'No autenticado') {
+        history.push('/login');
+      }
+    } finally {
+      setIsLoadingData(false);
     }
-  ]);
+  };
 
   const handleTeamReorder = (event: ReorderEndCustomEvent) => {
     const reorderedTeam = [...pokemonTeam];
@@ -265,34 +230,66 @@ const Tab3: React.FC = () => {
     event.detail.complete();
   };
 
-  const movePokemonToPc = (pokemonId: number) => {
-    const pokemon = pokemonTeam.find(p => p.id === pokemonId);
-    if (!pokemon || pokemonTeam.length <= 1) return; // Mínimo 1 Pokémon en el equipo
+  const movePokemonToPc = async (pokemonId: number) => {
+    const pokemon = pokemonTeam.find(p => p.instanceId === pokemonId);
+    if (!pokemon) return;
+    
+    if (pokemonTeam.length <= 1) {
+      const alert = await alertController.create({
+        header: 'Error',
+        message: 'Debes tener al menos 1 Pokémon en tu equipo',
+        buttons: ['OK']
+      });
+      await alert.present();
+      return;
+    }
 
-    const updatedTeam = pokemonTeam.filter(p => p.id !== pokemonId);
-    const updatedPokemon = { ...pokemon, location: 'pc' as const, boxId: selectedBox };
-    
-    const updatedBoxes = [...pcBoxes];
-    updatedBoxes[selectedBox].pokemon.push(updatedPokemon);
-    
-    setPokemonTeam(updatedTeam);
-    setPcBoxes(updatedBoxes);
+    setIsLoading(true);
+    try {
+      const boxNumber = selectedBox + 1; // API usa 1, 2, 3
+      await authService.movePokemon(pokemon.instanceId!, 'pc', boxNumber);
+      await loadData(); // Recargar datos después del movimiento
+    } catch (err: any) {
+      const alert = await alertController.create({
+        header: 'Error',
+        message: err.message || 'Error al mover el Pokémon',
+        buttons: ['OK']
+      });
+      await alert.present();
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const movePokemonToTeam = (pokemonId: number) => {
-    if (pokemonTeam.length >= 6) return; // Máximo 6 Pokémon en el equipo
+  const movePokemonToTeam = async (pokemonId: number) => {
+    if (pokemonTeam.length >= 6) {
+      const alert = await alertController.create({
+        header: 'Equipo Lleno',
+        message: 'El equipo está lleno (máximo 6 Pokémon). Mueve un Pokémon al PC primero.',
+        buttons: ['OK']
+      });
+      await alert.present();
+      return;
+    }
 
     const box = pcBoxes[selectedBox];
-    const pokemon = box.pokemon.find(p => p.id === pokemonId);
+    const pokemon = box.pokemon.find(p => p.instanceId === pokemonId);
     if (!pokemon) return;
 
-    const updatedBoxes = [...pcBoxes];
-    updatedBoxes[selectedBox].pokemon = updatedBoxes[selectedBox].pokemon.filter(p => p.id !== pokemonId);
-    
-    const updatedPokemon = { ...pokemon, location: 'team' as const, boxId: undefined };
-    
-    setPokemonTeam([...pokemonTeam, updatedPokemon]);
-    setPcBoxes(updatedBoxes);
+    setIsLoading(true);
+    try {
+      await authService.movePokemon(pokemon.instanceId!, 'team');
+      await loadData(); // Recargar datos después del movimiento
+    } catch (err: any) {
+      const alert = await alertController.create({
+        header: 'Error',
+        message: err.message || 'Error al mover el Pokémon',
+        buttons: ['OK']
+      });
+      await alert.present();
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getTypeColor = (type: string) => {
@@ -436,15 +433,22 @@ const Tab3: React.FC = () => {
   const checkBiometricAvailability = useCallback(async () => {
     setIsLoading(true);
     try {
+      const currentIsNative = Capacitor.isNativePlatform();
+      const currentPlatform = Capacitor.getPlatform();
+      const currentIsPWA = !currentIsNative && 
+        (window.matchMedia('(display-mode: standalone)').matches || 
+         (window.navigator as any).standalone ||
+         document.referrer.includes('android-app://'));
+
       console.log('[Biometric] Verificando plataforma:', {
-        isNative,
-        platform,
-        isPWA,
+        isNative: currentIsNative,
+        platform: currentPlatform,
+        isPWA: currentIsPWA,
         userAgent: navigator.userAgent
       });
 
       // Si es PWA, mostrar mensaje específico
-      if (isPWA) {
+      if (currentIsPWA) {
         setBiometry({
           isAvailable: false,
           biometryType: BiometryType.NONE,
@@ -453,11 +457,12 @@ const Tab3: React.FC = () => {
         setMessage('WebAuthn disponible. Puedes crear un passkey para autenticación biométrica.');
         setPermissionStatus('PWA - WebAuthn');
         setBiometryAvailable(false);
+        setIsLoading(false);
         return;
       }
 
       // Si no es nativo (navegador web normal)
-      if (!isNative) {
+      if (!currentIsNative) {
         setBiometry({
           isAvailable: false,
           biometryType: BiometryType.NONE,
@@ -466,6 +471,7 @@ const Tab3: React.FC = () => {
         setMessage('WebAuthn disponible. Puedes crear un passkey para autenticación biométrica.');
         setPermissionStatus('Navegador Web');
         setBiometryAvailable(false);
+        setIsLoading(false);
         return;
       }
 
@@ -477,6 +483,10 @@ const Tab3: React.FC = () => {
         const result = await NativeBiometric.isAvailable();
         console.log('[Biometric] Resultado nativo:', result);
         
+        const biometryTypeName = result.biometryType === BiometryType.FACE_ID ? 'Face ID' :
+                                 result.biometryType === BiometryType.TOUCH_ID ? 'Touch ID' :
+                                 result.biometryType === BiometryType.FINGERPRINT ? 'Fingerprint' : 'Biometría';
+        
         setBiometry({
           isAvailable: result.isAvailable,
           biometryType: result.biometryType,
@@ -486,29 +496,29 @@ const Tab3: React.FC = () => {
         setBiometryAvailable(result.isAvailable);
         
         if (result.isAvailable) {
-          setMessage(`${biometryName} configurado y listo`);
+          setMessage(`${biometryTypeName} configurado y listo`);
         } else {
-          setMessage(`Configure ${platform === 'ios' ? 'Face ID/Touch ID' : 'Huella digital'} en ajustes del dispositivo`);
+          setMessage(`Configure ${currentPlatform === 'ios' ? 'Face ID/Touch ID' : 'Huella digital'} en ajustes del dispositivo`);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('[Biometric] Error en plugin nativo:', error);
         setBiometry({
           isAvailable: false,
           biometryType: BiometryType.NONE,
-          reason: `Error del plugin: ${error}`
+          reason: `Error del plugin: ${error?.message || error}`
         });
         setPermissionStatus('Error en plugin');
         setMessage('Error al acceder a la biometría nativa');
         setBiometryAvailable(false);
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Biometric] Error general:', error);
-      setMessage(`Error: ${error}`);
+      setMessage(`Error: ${error?.message || error}`);
     } finally {
       setIsLoading(false);
     }
-  }, [isNative, platform, isPWA, biometryName]);
+  }, []);
 
   // Autenticación biométrica completa (lógica de Tab5)
   const authenticateBiometric = async () => {
@@ -588,11 +598,30 @@ const Tab3: React.FC = () => {
       } catch {
         // Ignorar errores de SplashScreen
       }
-      await checkBiometricAvailability();
+      // Solo verificar biometría si no está autenticado (para no interferir con pruebas)
+      if (!isAuthenticated) {
+        try {
+          await checkBiometricAvailability();
+        } catch (error) {
+          console.error('Error verificando biometría:', error);
+        }
+      }
     };
 
     initialize();
-  }, [checkBiometricAvailability]);
+  }, [checkBiometricAvailability, isAuthenticated]);
+
+  // Cargar datos cuando se autentica
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadData();
+    }
+  }, [isAuthenticated]);
+
+  // Cargar datos al montar el componente (para pruebas)
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const currentBox = pcBoxes[selectedBox];
   const currentPokemon = currentView === 'team' ? pokemonTeam : currentBox.pokemon;
@@ -791,6 +820,37 @@ const Tab3: React.FC = () => {
         {/* Vista del PC (solo si está autenticado) */}
         {isAuthenticated && (
           <div className="pc-body">
+          {/* Estados de carga y error */}
+          {isLoadingData && (
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              padding: '40px',
+              flexDirection: 'column',
+              gap: '16px'
+            }}>
+              <IonSpinner name="crescent" />
+              <IonText color="medium">Cargando datos...</IonText>
+            </div>
+          )}
+
+          {error && !isLoadingData && (
+            <div style={{ 
+              padding: '20px', 
+              textAlign: 'center' 
+            }}>
+              <IonText color="danger">
+                <p>{error}</p>
+              </IonText>
+              <IonButton onClick={loadData} style={{ marginTop: '16px' }}>
+                Reintentar
+              </IonButton>
+            </div>
+          )}
+
+          {!isLoadingData && !error && (
+            <>
           {/* Selector de vista */}
           <div className="view-selector">
             <IonSegment 
@@ -799,7 +859,7 @@ const Tab3: React.FC = () => {
               className="pc-segment"
             >
               <IonSegmentButton value="team">
-                <IonLabel>Mi Equipo ({pokemonTeam.length}/6)</IonLabel>
+                <IonLabel>Mi Equipo ({teamInfo?.teamCount || pokemonTeam.length}/{teamInfo?.maxTeamSize || 6})</IonLabel>
               </IonSegmentButton>
               <IonSegmentButton value="pc">
                 <IonLabel>PC Storage</IonLabel>
@@ -891,8 +951,8 @@ const Tab3: React.FC = () => {
                             className="move-btn" 
                             fill="outline" 
                             size="small"
-                            onClick={() => movePokemonToPc(pokemon.id)}
-                            disabled={pokemonTeam.length <= 1}
+                            onClick={() => movePokemonToPc(pokemon.instanceId || pokemon.id)}
+                            disabled={pokemonTeam.length <= 1 || isLoading}
                           >
                             <IonIcon icon={swapHorizontal} slot="start" />
                             To PC
@@ -902,8 +962,8 @@ const Tab3: React.FC = () => {
                             className="move-btn" 
                             fill="outline" 
                             size="small"
-                            onClick={() => movePokemonToTeam(pokemon.id)}
-                            disabled={pokemonTeam.length >= 6}
+                            onClick={() => movePokemonToTeam(pokemon.instanceId || pokemon.id)}
+                            disabled={pokemonTeam.length >= 6 || isLoading}
                           >
                             <IonIcon icon={swapHorizontal} slot="start" />
                             To Team
@@ -929,6 +989,8 @@ const Tab3: React.FC = () => {
                 <p>{currentBox.pokemon.length} Pokémon almacenados</p>
               </div>
             </div>
+          )}
+            </>
           )}
           </div>
         )}
