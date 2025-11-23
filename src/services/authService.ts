@@ -222,6 +222,82 @@ class AuthService {
     }
   }
 
+  async scanPokemon(pokemonId: number): Promise<{
+    id: number;
+    name: string;
+    rarity: 'common' | 'rare' | 'legendary';
+    timestamp: string;
+    placement?: 'team';
+    pokemonInstanceId?: number;
+    requiresBoxSelection?: boolean;
+    captureId?: number;
+    pokemonId?: number;
+  }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/captures/scan`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ pokemonId }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          this.removeToken();
+          throw new Error('No autenticado');
+        }
+        if (response.status === 403) {
+          throw new Error('Este endpoint es solo para entrenadores');
+        }
+        const error = await response.json().catch(() => ({ message: 'Error al escanear el Pokémon' }));
+        throw new Error(error.message || 'Error al escanear el Pokémon');
+      }
+
+      return response.json();
+    } catch (error: any) {
+      if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+        throw new Error(`No se pudo conectar con la API. Verifica que el servidor esté corriendo en ${API_BASE_URL}`);
+      }
+      throw error;
+    }
+  }
+
+  async completeCapture(captureId: number, pcBox: number): Promise<{
+    id: number;
+    name: string;
+    rarity: 'common' | 'rare' | 'legendary';
+    timestamp: string;
+    placement: 'pc';
+    pcBox: number;
+    pokemonInstanceId: number;
+  }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/captures/complete`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ captureId, pcBox }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          this.removeToken();
+          throw new Error('No autenticado');
+        }
+        if (response.status === 403) {
+          throw new Error('Este endpoint es solo para entrenadores');
+        }
+        const error = await response.json().catch(() => ({ message: 'Error al completar la captura' }));
+        throw new Error(error.message || 'Error al completar la captura');
+      }
+
+      return response.json();
+    } catch (error: any) {
+      if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+        throw new Error(`No se pudo conectar con la API. Verifica que el servidor esté corriendo en ${API_BASE_URL}`);
+      }
+      throw error;
+    }
+  }
+
   async updateProfile(id: number, data: UpdateProfileData): Promise<{ message: string; entrenador: User }> {
     const response = await fetch(`${API_BASE_URL}/entrenadores/${id}`, {
       method: 'PUT',

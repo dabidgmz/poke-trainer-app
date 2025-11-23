@@ -15,11 +15,13 @@ import {
   IonRow,
   IonCol,
   IonAlert,
-  IonLoading,
   IonFab,
   IonFabButton,
   IonChip,
-  IonLabel
+  IonLabel,
+  IonModal,
+  IonText,
+  IonSpinner
 } from '@ionic/react';
 import { 
   camera, 
@@ -35,6 +37,9 @@ import {
 import { Camera, CameraResultType, CameraSource, PermissionStatus } from '@capacitor/camera';
 import QRScanner from '../components/QRScanner';
 import { CameraUtils } from '../utils/cameraUtils';
+import authService from '../services/authService';
+import { useHistory } from 'react-router-dom';
+import { alertController } from '@ionic/core';
 import './Tab4.css';
 
 interface CapturedPokemon {
@@ -53,6 +58,7 @@ interface CapturedPokemon {
 }
 
 const Tab4: React.FC = () => {
+  const history = useHistory();
   const [isScanning, setIsScanning] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [flashOn, setFlashOn] = useState(false);
@@ -63,6 +69,9 @@ const Tab4: React.FC = () => {
   const [cameraPermission, setCameraPermission] = useState<'unknown' | 'granted' | 'denied' | 'prompt'>('unknown');
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isRequestingPermissions, setIsRequestingPermissions] = useState(false);
+  const [showBoxSelection, setShowBoxSelection] = useState(false);
+  const [pendingCapture, setPendingCapture] = useState<{ captureId: number; pokemonId: number; name: string; rarity: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -365,24 +374,119 @@ const Tab4: React.FC = () => {
     setShowCaptureAlert(false);
   };
 
-  const handleQRDetected = (qrCode: string) => {
+  const handleQRDetected = async (qrCode: string) => {
     console.log('QR Code detectado:', qrCode);
+    setIsLoading(true);
+    setError(null);
     
-    // Buscar el Pokémon correspondiente al código QR
-    const pokemon = availablePokemon.find(p => p.qrCode === qrCode);
-    
-    if (pokemon) {
-      const capturedPokemon: CapturedPokemon = {
-        ...pokemon,
-        captureTime: new Date()
-      };
+    try {
+      // El QR code debería contener el pokemonId (número)
+      // Puede venir como "25" o "POKEMON_25" o solo el número
+      let pokemonId: number;
       
-      setNewPokemon(capturedPokemon);
-      setShowCaptureAlert(true);
-    } else {
-      // Pokémon no encontrado
-      console.log('Pokémon no encontrado para el código QR:', qrCode);
+      // Intentar extraer el número del QR
+      const match = qrCode.match(/\d+/);
+      if (match) {
+        pokemonId = parseInt(match[0], 10);
+      } else {
+        // Si no hay número, intentar parsear directamente
+        pokemonId = parseInt(qrCode, 10);
+      }
+      
+      if (isNaN(pokemonId) || pokemonId <= 0) {
+        throw new Error('Código QR inválido. Debe contener un ID de Pokémon válido.');
+      }
+      
+      // Llamar a la API para escanear el Pokémon
+      const result = await authService.scanPokemon(pokemonId);
+      
+      // Si requiere selección de caja (equipo lleno)
+      if (result.requiresBoxSelection) {
+        setPendingCapture({
+          captureId: result.captureId!,
+          pokemonId: result.pokemonId!,
+          name: result.name,
+          rarity: result.rarity
+        });
+        setShowBoxSelection(true);
+        setIsLoading(false);
+        return;
+      }
+      
+      // Si se agregó directamente al equipo
+      if (result.placement === 'team') {
+        const alert = await alertController.create({
+          header: '¡Pokémon Capturado!',
+          message: `Has capturado a ${result.name.charAt(0).toUpperCase() + result.name.slice(1)} (${result.rarity}) y se agregó a tu equipo.`,
+          buttons: ['OK']
+        });
+        await alert.present();
+        
+        // Cerrar el scanner
+        setShowQRScanner(false);
+      }
+      
+    } catch (err: any) {
+      console.error('Error capturando Pokémon:', err);
+      setError(err.message || 'Error al capturar el Pokémon');
+      
+      if (err.message === 'No autenticado') {
+        history.push('/login');
+      } else {
+        const alert = await alertController.create({
+          header: 'Error',
+          message: err.message || 'Error al capturar el Pokémon',
+          buttons: ['OK']
+        });
+        await alert.present();
+      }
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const handleBoxSelection = async (boxNumber: number) => {
+    if (!pendingCapture) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const result = await authService.completeCapture(pendingCapture.captureId, boxNumber);
+      
+      const alert = await alertController.create({
+        header: '¡Pokémon Capturado!',
+        message: `Has capturado a ${result.name.charAt(0).toUpperCase() + result.name.slice(1)} (${result.rarity}) y se guardó en la caja ${result.pcBox} del PC.`,
+        buttons: ['OK']
+      });
+      await alert.present();
+      
+      setShowBoxSelection(false);
+      setPendingCapture(null);
+      setShowQRScanner(false);
+      
+    } catch (err: any) {
+      console.error('Error completando captura:', err);
+      setError(err.message || 'Error al completar la captura');
+      
+      if (err.message === 'No autenticado') {
+        history.push('/login');
+    } else {
+        const alert = await alertController.create({
+          header: 'Error',
+          message: err.message || 'Error al completar la captura',
+          buttons: ['OK']
+        });
+        await alert.present();
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const cancelBoxSelection = () => {
+    setShowBoxSelection(false);
+    setPendingCapture(null);
   };
 
   const handleCloseQRScanner = () => {
@@ -656,6 +760,91 @@ const Tab4: React.FC = () => {
           )}
         </div>
 
+        {/* Modal de selección de caja (equipo lleno) */}
+        <IonModal isOpen={showBoxSelection} onDidDismiss={cancelBoxSelection}>
+          <IonHeader>
+            <IonToolbar>
+              <IonTitle>Equipo Lleno</IonTitle>
+              <IonButton slot="end" fill="clear" onClick={cancelBoxSelection}>
+                <IonIcon icon={close} />
+              </IonButton>
+            </IonToolbar>
+          </IonHeader>
+          <IonContent className="ion-padding">
+            {pendingCapture && (
+              <div style={{ textAlign: 'center', padding: '20px' }}>
+                <IonText>
+                  <h2>¡{pendingCapture.name.charAt(0).toUpperCase() + pendingCapture.name.slice(1)} capturado!</h2>
+                  <p>Tu equipo está lleno (6/6).</p>
+                  <p>¿A qué caja del PC quieres mandarlo?</p>
+                </IonText>
+                
+                <IonGrid style={{ marginTop: '30px' }}>
+                  <IonRow>
+                    <IonCol size="4">
+                      <IonButton
+                        expand="block"
+                        fill="outline"
+                        onClick={() => handleBoxSelection(1)}
+                        disabled={isLoading}
+                        style={{ height: '100px' }}
+                      >
+                        <div>
+                          <IonIcon icon={ellipse} style={{ fontSize: '2rem' }} />
+                          <div>Caja 1</div>
+                        </div>
+                      </IonButton>
+                    </IonCol>
+                    <IonCol size="4">
+                      <IonButton
+                        expand="block"
+                        fill="outline"
+                        onClick={() => handleBoxSelection(2)}
+                        disabled={isLoading}
+                        style={{ height: '100px' }}
+                      >
+                        <div>
+                          <IonIcon icon={ellipse} style={{ fontSize: '2rem' }} />
+                          <div>Caja 2</div>
+                        </div>
+                      </IonButton>
+                    </IonCol>
+                    <IonCol size="4">
+                      <IonButton
+                        expand="block"
+                        fill="outline"
+                        onClick={() => handleBoxSelection(3)}
+                        disabled={isLoading}
+                        style={{ height: '100px' }}
+                      >
+                        <div>
+                          <IonIcon icon={ellipse} style={{ fontSize: '2rem' }} />
+                          <div>Caja 3</div>
+                        </div>
+                      </IonButton>
+                    </IonCol>
+                  </IonRow>
+                </IonGrid>
+                
+                {isLoading && (
+                  <div style={{ marginTop: '20px', textAlign: 'center' }}>
+                    <IonSpinner />
+                    <IonText color="medium">
+                      <p>Guardando en el PC...</p>
+                    </IonText>
+                  </div>
+                )}
+                
+                {error && (
+                  <IonText color="danger">
+                    <p>{error}</p>
+                  </IonText>
+                )}
+              </div>
+            )}
+          </IonContent>
+        </IonModal>
+
         {/* Alertas */}
         <IonAlert
           isOpen={showCaptureAlert}
@@ -675,10 +864,27 @@ const Tab4: React.FC = () => {
           ]}
         />
 
-        <IonLoading
-          isOpen={isLoading}
-          message="Procesando captura..."
-        />
+        {isLoading && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 9999,
+            flexDirection: 'column',
+            gap: '16px'
+          }}>
+            <IonSpinner name="crescent" style={{ '--color': 'white' }} />
+            <IonText color="light">
+              <p style={{ color: 'white', margin: 0 }}>Procesando captura...</p>
+            </IonText>
+          </div>
+        )}
       </IonContent>
     </IonPage>
   );
