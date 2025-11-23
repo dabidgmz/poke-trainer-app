@@ -132,6 +132,27 @@ class AuthService {
     return response.json();
   }
 
+  async getTeam(): Promise<{ team: any[]; teamCount: number; maxTeamSize: number }> {
+    const response = await fetch(`${API_BASE_URL}/entrenadores/me/team`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        this.removeToken();
+        throw new Error('No autenticado');
+      }
+      if (response.status === 403) {
+        throw new Error('Este endpoint es solo para entrenadores');
+      }
+      const error = await response.json();
+      throw new Error(error.message || 'Error al obtener el equipo');
+    }
+
+    return response.json();
+  }
+
   async updateProfile(id: number, data: UpdateProfileData): Promise<{ message: string; entrenador: User }> {
     const response = await fetch(`${API_BASE_URL}/entrenadores/${id}`, {
       method: 'PUT',
