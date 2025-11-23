@@ -146,7 +146,7 @@ const VerifyEmail: React.FC = () => {
                 {code.map((digit, index) => (
                   <IonInput
                     key={index}
-                    ref={(el) => (inputRefs.current[index] = el)}
+                    ref={(el) => { inputRefs.current[index] = el; }}
                     type="text"
                     inputMode="numeric"
                     maxlength={1}
