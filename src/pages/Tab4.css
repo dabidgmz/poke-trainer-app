@@ -810,3 +810,12 @@
     cursor: pointer;
   }
 }
+
+/* Estilos para el modal de selección de caja */
+.box-selection-modal {
+  --z-index: 10000;
+}
+
+.box-selection-modal ion-content {
+  --background: #ffffff;
+}
