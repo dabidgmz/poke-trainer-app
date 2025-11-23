@@ -411,9 +411,9 @@ const Tab6: React.FC = () => {
 
   return (
     <IonPage className="torch-page">
-      <IonHeader>
-        <IonToolbar>
-          <IonTitle>Linterna</IonTitle>
+      <IonHeader style={{ '--background': '#dc2626', '--color': 'white' }}>
+        <IonToolbar style={{ '--background': '#dc2626', '--color': 'white' }}>
+          <IonTitle style={{ color: 'white', fontWeight: 'bold' }}>⚡ Linterna</IonTitle>
           <ProfileButton />
         </IonToolbar>
       </IonHeader>
@@ -428,186 +428,168 @@ const Tab6: React.FC = () => {
           buttons={['OK']}
         />
 
-        {/* Tarjeta de estado */}
-        <IonCard className="torch-status-card">
+        {/* Tarjeta de estado estilo Pokémon */}
+        <IonCard style={{ 
+          margin: '20px', 
+          background: 'white', 
+          borderRadius: '20px',
+          border: '3px solid #dc2626',
+          boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
+        }}>
           <IonCardContent>
-            <div className="torch-status-content">
-              <div className="torch-icon-container">
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '16px',
+              padding: '10px'
+            }}>
+              <div style={{
+                width: '80px',
+                height: '80px',
+                borderRadius: '50%',
+                background: isEnabled ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)' : 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: isEnabled ? '0 0 20px rgba(251, 191, 36, 0.6)' : '0 4px 12px rgba(220, 38, 38, 0.4)',
+                border: '3px solid white',
+                animation: isEnabled ? 'pulse 2s ease-in-out infinite' : 'none'
+              }}>
                 <IonIcon 
                   icon={isEnabled ? flashlight : flashlightOutline} 
-                  className={`torch-icon ${isEnabled ? 'enabled' : 'disabled'}`}
+                  style={{ 
+                    fontSize: '40px', 
+                    color: 'white',
+                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
+                  }}
                 />
               </div>
-              <div className="torch-status-info">
-                <h2 className="torch-title">
-                  {isEnabled ? 'Linterna Encendida' : 'Linterna Apagada'}
+              <div style={{ flex: 1 }}>
+                <h2 style={{ 
+                  margin: 0, 
+                  color: '#dc2626', 
+                  fontSize: '20px',
+                  fontWeight: 'bold',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px'
+                }}>
+                  {isEnabled ? '⚡ ¡Encendida!' : '💤 Apagada'}
                 </h2>
-                <p className="torch-subtitle">
+                <p style={{ 
+                  margin: '4px 0 0 0', 
+                  color: '#6b7280', 
+                  fontSize: '14px' 
+                }}>
                   {isAvailable 
-                    ? (isEnabled ? 'La linterna está activa' : 'La linterna está inactiva')
+                    ? (isEnabled ? '¡Lista para usar!' : 'Presiona para encender')
                     : 'Linterna no disponible'
                   }
                 </p>
-              </div>
-              <div className="torch-status-indicator">
-                <IonIcon 
-                  icon={isEnabled ? checkmarkCircle : closeCircle}
-                  color={isEnabled ? 'success' : 'medium'}
-                />
               </div>
             </div>
           </IonCardContent>
         </IonCard>
 
-        {/* Información de plataforma */}
-        {!isActuallyNative && (
-          <IonCard color="warning">
-            <IonCardContent>
-              <div className="flex items-start">
-                <IonIcon icon={warning} className="text-2xl mr-3 mt-1" />
-                <div>
-                  <h2 className="font-bold text-lg">Dispositivo Web</h2>
-                  <p className="mt-2">
-                    La linterna solo está disponible en aplicaciones nativas. 
-                    Descarga la app desde la tienda para usar esta función.
-                  </p>
-                </div>
-              </div>
-            </IonCardContent>
-          </IonCard>
-        )}
-
-        {/* Botón circular estilo Vue */}
+        {/* Botón único de control estilo Pokémon */}
         {isAvailable && (
-          <div className="center">
-            <button
-              className={`btn ${isEnabled ? 'active' : ''}`}
-              disabled={isLoading || (useWebTorch ? webTorchDisabled : false)}
-              onClick={toggleTorch}
-            >
-              {isLoading ? (
-                <IonSpinner />
-              ) : (
-                <IonIcon 
-                  icon={isEnabled ? flashlight : flashlightOutline} 
-                  className="btn-icon"
-                />
-              )}
-            </button>
-          </div>
-        )}
-
-        {/* Controles principales */}
-        {isAvailable && (
-          <IonCard>
+          <IonCard style={{ 
+            margin: '0 20px 20px 20px', 
+            background: 'white', 
+            borderRadius: '20px',
+            border: '3px solid #dc2626',
+            boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
+          }}>
             <IonCardContent>
-              <h3 className="section-title">Controles de Linterna</h3>
-              
-              <IonGrid>
-                <IonRow>
-                  <IonCol size="6">
-                    <IonButton 
-                      expand="block" 
-                      fill="outline"
-                      onClick={enableTorch}
-                      disabled={isLoading || isEnabled}
-                      className="torch-control-btn"
-                    >
-                      {isLoading ? (
-                        <IonSpinner />
-                      ) : (
-                        <>
-                          <IonIcon icon={flashlight} slot="start" />
-                          Encender
-                        </>
-                      )}
-                    </IonButton>
-                  </IonCol>
-                  <IonCol size="6">
-                    <IonButton 
-                      expand="block" 
-                      fill="outline"
-                      onClick={disableTorch}
-                      disabled={isLoading || !isEnabled}
-                      className="torch-control-btn"
-                    >
-                      {isLoading ? (
-                        <IonSpinner />
-                      ) : (
-                        <>
-                          <IonIcon icon={flashlightOutline} slot="start" />
-                          Apagar
-                        </>
-                      )}
-                    </IonButton>
-                  </IonCol>
-                </IonRow>
-                
-                <IonRow>
-                  <IonCol>
                     <IonButton 
                       expand="block" 
                       onClick={toggleTorch}
-                      disabled={isLoading}
-                      className="torch-toggle-btn"
-                      color={isEnabled ? 'danger' : 'primary'}
+                disabled={isLoading || (useWebTorch ? webTorchDisabled : false)}
+                style={{
+                  '--background': isEnabled ? '#dc2626' : '#dc2626',
+                  '--color': 'white',
+                  '--border-radius': '15px',
+                  '--padding-top': '20px',
+                  '--padding-bottom': '20px',
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px',
+                  boxShadow: isEnabled 
+                    ? '0 4px 12px rgba(220, 38, 38, 0.5)' 
+                    : '0 4px 12px rgba(220, 38, 38, 0.3)',
+                  border: '3px solid white',
+                  height: '60px'
+                }}
+                size="large"
                     >
                       {isLoading ? (
-                        <IonSpinner />
+                  <IonSpinner color="light" />
                       ) : (
                         <>
-                          <IonIcon icon={isEnabled ? flashlightOutline : flashlight} slot="start" />
-                          {isEnabled ? 'Apagar Linterna' : 'Encender Linterna'}
+                    <IonIcon 
+                      icon={isEnabled ? flashlightOutline : flashlight} 
+                      slot="start" 
+                      style={{ fontSize: '24px' }}
+                    />
+                    {isEnabled ? '💤 Apagar' : '⚡ Encender'}
                         </>
                       )}
                     </IonButton>
-                  </IonCol>
-                </IonRow>
-              </IonGrid>
             </IonCardContent>
           </IonCard>
         )}
 
-        {/* Controlador de detección de movimiento */}
-        <IonCard>
+        {/* Control de encendido automático con movimiento */}
+        {isAvailable && isMotionSupported && (
+          <IonCard style={{ 
+            margin: '0 20px 20px 20px', 
+            background: 'white', 
+            borderRadius: '20px',
+            border: '3px solid #dc2626',
+            boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
+          }}>
           <IonCardContent>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 className="section-title" style={{ margin: 0 }}>Sensor de Movimiento</h3>
-              <IonChip color={isMotionSupported ? 'success' : 'danger'}>
-                <IonIcon icon={isMotionSupported ? checkmarkCircle : closeCircle} />
-                <IonLabel>{isMotionSupported ? 'Disponible' : 'No Disponible'}</IonLabel>
-              </IonChip>
-            </div>
-            
-            {isMotionSupported ? (
-              <>
-                {/* Control de encendido automático */}
+              <h3 style={{ 
+                color: '#dc2626', 
+                fontSize: '18px',
+                fontWeight: 'bold',
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                marginBottom: '16px',
+                textAlign: 'center'
+              }}>
+                📱 Control con Movimiento
+              </h3>
+              
                 <div style={{ 
                   backgroundColor: isAutoLightEnabled 
-                    ? (isEnabled ? '#f8d7da' : '#d4edda')
+                  ? (isEnabled ? '#fee2e2' : '#fef2f2')
                     : '#f8f9fa',
                   padding: '16px', 
-                  borderRadius: '8px',
+                borderRadius: '15px',
                   marginBottom: '16px',
                   border: isAutoLightEnabled 
-                    ? (isEnabled ? '2px solid #dc3545' : '2px solid #28a745')
-                    : '2px solid #dee2e6',
-                  transition: 'all 0.3s ease'
+                  ? (isEnabled ? '3px solid #dc2626' : '3px solid #dc2626')
+                  : '2px solid #e5e7eb',
+                transition: 'all 0.3s ease',
+                background: isAutoLightEnabled 
+                  ? (isEnabled ? 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)' : 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)')
+                  : 'white'
                 }}>
                   <IonItem lines="none" style={{ '--background': 'transparent' }}>
                     <IonIcon 
                       icon={flashlight} 
                       slot="start" 
-                      color={isAutoLightEnabled ? (isEnabled ? 'danger' : 'success') : 'medium'}
+                      style={{ color: '#dc2626', fontSize: '24px' }}
                     />
                     <IonLabel>
-                      <h3 style={{ fontWeight: 'bold' }}>Control Automático</h3>
+                    <h3 style={{ fontWeight: 'bold', color: '#dc2626' }}>Encender/Apagar Sacudiendo</h3>
                       <p style={{ fontSize: '12px' }}>
                         {isAutoLightEnabled 
                           ? (isEnabled 
-                              ? 'Mueve 3 veces para apagar la linterna' 
-                              : 'Mueve 3 veces para encender la linterna')
-                          : 'Activar para controlar con movimientos'}
+                            ? 'Sacude 3 veces para apagar la linterna' 
+                            : 'Sacude 3 veces para encender la linterna')
+                        : 'Activa para controlar la linterna sacudiendo el teléfono'}
                       </p>
                     </IonLabel>
                     <IonToggle 
@@ -644,7 +626,7 @@ const Tab6: React.FC = () => {
                         {isEnabled ? 'Modo: APAGAR' : 'Modo: ENCENDER'}
                       </div>
                       <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
-                        Contador de Movimientos
+                      Contador de Sacudidas
                       </div>
                       <div style={{ 
                         display: 'flex', 
@@ -653,9 +635,6 @@ const Tab6: React.FC = () => {
                         marginBottom: '8px'
                       }}>
                         {[1, 2, 3].map((num) => {
-                          const activeColor = isEnabled ? '#dc3545' : '#28a745';
-                          const activeBorderColor = isEnabled ? '#c82333' : '#1e7e34';
-                          const pulseAnimation = isEnabled ? 'counterPulseRed' : 'counterPulse';
                           return (
                             <div
                               key={num}
@@ -668,11 +647,11 @@ const Tab6: React.FC = () => {
                                 justifyContent: 'center',
                                 fontSize: '24px',
                                 fontWeight: 'bold',
-                                backgroundColor: motionCount >= num ? activeColor : '#e9ecef',
-                                color: motionCount >= num ? 'white' : '#6c757d',
+                              backgroundColor: motionCount >= num ? '#dc2626' : '#fee2e2',
+                              color: motionCount >= num ? 'white' : '#dc2626',
                                 transition: 'all 0.3s ease',
-                                border: motionCount >= num ? `3px solid ${activeBorderColor}` : '3px solid #dee2e6',
-                                animation: motionCount === num ? `${pulseAnimation} 0.5s ease-out` : 'none'
+                              border: motionCount >= num ? '3px solid white' : '3px solid #dc2626',
+                              boxShadow: motionCount >= num ? '0 4px 12px rgba(220, 38, 38, 0.4)' : 'none'
                               }}
                             >
                               {num}
@@ -683,9 +662,9 @@ const Tab6: React.FC = () => {
                       <div style={{ 
                         fontSize: '18px', 
                         fontWeight: 'bold',
-                        color: motionCount >= 3 ? (isEnabled ? '#dc3545' : '#28a745') : '#6c757d'
+                      color: motionCount >= 3 ? '#dc2626' : '#9ca3af'
                       }}>
-                        {motionCount}/3 Movimientos
+                      {motionCount}/3 Sacudidas
                       </div>
                       {motionCount > 0 && motionCount < 3 && (
                         <IonButton 
@@ -700,210 +679,10 @@ const Tab6: React.FC = () => {
                     </div>
                   )}
                 </div>
-
-                <IonButton 
-                  expand="block" 
-                  onClick={toggleMotionMonitoring}
-                  color={isMotionActive ? 'danger' : 'primary'}
-                  style={{ marginBottom: '16px' }}
-                >
-                  <IonIcon icon={navigate} slot="start" />
-                  {isMotionActive ? 'Detener Monitor' : 'Iniciar Monitor'}
-                </IonButton>
-
-                {isMotionActive && (
-                  <div style={{ 
-                    backgroundColor: 'var(--ion-color-light)', 
-                    padding: '16px', 
-                    borderRadius: '8px',
-                    marginBottom: '16px'
-                  }}>
-                    <h4 style={{ marginTop: 0, marginBottom: '12px', color: 'var(--ion-color-primary)' }}>
-                      Datos del Acelerómetro
-                    </h4>
-                    
-                    <IonGrid>
-                      <IonRow>
-                        <IonCol size="4">
-                          <div style={{ 
-                            textAlign: 'center', 
-                            padding: '12px',
-                            backgroundColor: 'white',
-                            borderRadius: '8px',
-                            border: '2px solid #e74c3c'
-                          }}>
-                            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Eje X</div>
-                            <div style={{ 
-                              fontSize: '24px', 
-                              fontWeight: 'bold',
-                              color: '#e74c3c'
-                            }}>
-                              {motionData.x}
-                            </div>
-                            <div style={{ fontSize: '10px', color: '#999' }}>m/s²</div>
-                          </div>
-                        </IonCol>
-                        
-                        <IonCol size="4">
-                          <div style={{ 
-                            textAlign: 'center', 
-                            padding: '12px',
-                            backgroundColor: 'white',
-                            borderRadius: '8px',
-                            border: '2px solid #3498db'
-                          }}>
-                            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Eje Y</div>
-                            <div style={{ 
-                              fontSize: '24px', 
-                              fontWeight: 'bold',
-                              color: '#3498db'
-                            }}>
-                              {motionData.y}
-                            </div>
-                            <div style={{ fontSize: '10px', color: '#999' }}>m/s²</div>
-                          </div>
-                        </IonCol>
-                        
-                        <IonCol size="4">
-                          <div style={{ 
-                            textAlign: 'center', 
-                            padding: '12px',
-                            backgroundColor: 'white',
-                            borderRadius: '8px',
-                            border: '2px solid #2ecc71'
-                          }}>
-                            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Eje Z</div>
-                            <div style={{ 
-                              fontSize: '24px', 
-                              fontWeight: 'bold',
-                              color: '#2ecc71'
-                            }}>
-                              {motionData.z}
-                            </div>
-                            <div style={{ fontSize: '10px', color: '#999' }}>m/s²</div>
-                          </div>
-                        </IonCol>
-                      </IonRow>
-                    </IonGrid>
-
-                    <div style={{ 
-                      marginTop: '16px',
-                      padding: '12px',
-                      backgroundColor: 'white',
-                      borderRadius: '8px',
-                      border: '2px solid #9b59b6',
-                      textAlign: 'center'
-                    }}>
-                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Magnitud Total</div>
-                      <div style={{ 
-                        fontSize: '28px', 
-                        fontWeight: 'bold',
-                        color: '#9b59b6'
-                      }}>
-                        {motionMagnitude}
-                      </div>
-                      <div style={{ fontSize: '10px', color: '#999' }}>m/s²</div>
-                    </div>
-
-                    <div style={{ 
-                      marginTop: '12px', 
-                      padding: '8px',
-                      backgroundColor: '#fff3cd',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      color: '#856404'
-                    }}>
-                      <IonIcon icon={phonePortrait} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-                      <strong>Mueve tu teléfono</strong> para ver los valores cambiar en tiempo real
-                    </div>
-
-                    {/* Indicador de movimiento significativo */}
-                    {isAutoLightEnabled && motionMagnitude > 15 && (
-                      <div style={{ 
-                        marginTop: '12px', 
-                        padding: '12px',
-                        backgroundColor: '#28a745',
-                        borderRadius: '8px',
-                        fontSize: '14px',
-                        color: 'white',
-                        fontWeight: 'bold',
-                        textAlign: 'center',
-                        animation: 'pulse 0.5s ease-in-out'
-                      }}>
-                        🎯 ¡Movimiento Detectado!
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <IonItem button onClick={showMotionInfo}>
-                  <IonIcon icon={phonePortrait} slot="start" />
-                  <IonLabel>
-                    <h3>Información del Sensor</h3>
-                    <p>Toca para más detalles sobre la detección de movimiento</p>
-                  </IonLabel>
-                </IonItem>
-              </>
-            ) : (
-              <div style={{ 
-                padding: '16px', 
-                backgroundColor: '#f8d7da',
-                borderRadius: '8px',
-                color: '#721c24'
-              }}>
-                <IonIcon icon={warning} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-                El sensor de movimiento no está disponible en este dispositivo o navegador.
-              </div>
-            )}
           </IonCardContent>
         </IonCard>
+        )}
 
-        {/* Información del dispositivo */}
-        <IonCard>
-          <IonCardContent>
-            <h3 className="section-title">Información del Dispositivo</h3>
-            
-            <IonItem>
-              <IonLabel>
-                <h3>Plataforma</h3>
-                <p>{platform} - {isNative ? 'Nativa' : 'Web'}</p>
-              </IonLabel>
-            </IonItem>
-
-            <IonItem>
-              <IonLabel>
-                <h3>Linterna Disponible</h3>
-                <p>{isAvailable ? (useWebTorch ? 'Sí (Web)' : 'Sí (Nativa)') : 'No'}</p>
-              </IonLabel>
-              <IonIcon 
-                icon={isAvailable ? checkmarkCircle : closeCircle}
-                color={isAvailable ? 'success' : 'danger'}
-              />
-            </IonItem>
-
-            <IonItem>
-              <IonLabel>
-                <h3>Estado Actual</h3>
-                <p>{isEnabled ? 'Encendida' : 'Apagada'}</p>
-              </IonLabel>
-              <IonIcon 
-                icon={isEnabled ? flashlight : flashlightOutline}
-                color={isEnabled ? 'warning' : 'medium'}
-              />
-            </IonItem>
-
-            <IonItem>
-              <IonLabel>
-                <h3>Detección de Movimiento</h3>
-                <p>{isMotionSupported ? (isMotionActive ? 'Activo' : 'Disponible') : 'No disponible'}</p>
-              </IonLabel>
-              <IonIcon 
-                icon={isMotionSupported ? (isMotionActive ? checkmarkCircle : navigate) : warning}
-                color={isMotionSupported ? (isMotionActive ? 'success' : 'primary') : 'warning'}
-              />
-            </IonItem>
-          </IonCardContent>
-        </IonCard>
       </IonContent>
     </IonPage>
   );
