@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   IonPage,
   IonHeader,
@@ -40,6 +40,43 @@ const Login: React.FC = () => {
   const [showErrorAlert, setShowErrorAlert] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(location.state?.verified || false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstallable, setIsInstallable] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
+
+  // Detectar si la app ya está instalada
+  useEffect(() => {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const isIOSStandalone = (window.navigator as any).standalone === true;
+    setIsInstalled(isStandalone || isIOSStandalone);
+  }, []);
+
+  // Capturar el evento beforeinstallprompt para PWA
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      // Prevenir el prompt automático
+      e.preventDefault();
+      // Guardar el evento para usarlo más tarde
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Detectar cuando la app se instala
+    const handleAppInstalled = () => {
+      setIsInstalled(true);
+      setIsInstallable(false);
+      setDeferredPrompt(null);
+    };
+
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
 
   const handleInputChange = (field: keyof LoginData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -50,26 +87,46 @@ const Login: React.FC = () => {
     }
   };
 
-  const handleDownloadApp = () => {
-    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
-    const isAndroid = /android/i.test(userAgent);
-    const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream;
-    const isMobile = isAndroid || isIOS;
-
-    if (isMobile) {
-      if (isAndroid) {
-        // Abrir Play Store o descargar APK
-        // Puedes cambiar esta URL por la de tu app en Play Store
-        window.open('https://play.google.com/store/apps/details?id=io.ionic.starter', '_blank');
-      } else if (isIOS) {
-        // Abrir App Store
-        // Puedes cambiar esta URL por la de tu app en App Store
-        window.open('https://apps.apple.com/app/poketrainerapp', '_blank');
-      }
-    } else {
-      // Si no es móvil, mostrar mensaje
-      alert('La descarga de la app está disponible solo en dispositivos móviles. Visita esta página desde tu teléfono para descargar la app.');
+  const handleDownloadApp = async () => {
+    // Si la app ya está instalada, no hacer nada
+    if (isInstalled) {
+      return;
     }
+
+    // Si tenemos el evento beforeinstallprompt (Android/Chrome)
+    if (deferredPrompt) {
+      try {
+        // Mostrar el prompt de instalación
+        await deferredPrompt.prompt();
+        // Esperar a que el usuario responda
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`Usuario ${outcome === 'accepted' ? 'aceptó' : 'rechazó'} la instalación`);
+        // Limpiar el prompt
+        setDeferredPrompt(null);
+        setIsInstallable(false);
+      } catch (error) {
+        console.error('Error al mostrar el prompt de instalación:', error);
+      }
+      return;
+    }
+
+    // Para iOS, mostrar instrucciones
+    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+    const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream;
+
+    if (isIOS) {
+      // Mostrar instrucciones para iOS
+      alert(
+        'Para instalar la app en iOS:\n\n' +
+        '1. Toca el botón de compartir (cuadrado con flecha)\n' +
+        '2. Selecciona "Añadir a pantalla de inicio"\n' +
+        '3. Toca "Añadir" en la esquina superior derecha'
+      );
+      return;
+    }
+
+    // Si no es instalable, mostrar mensaje
+    alert('La instalación de la app no está disponible en este momento. Asegúrate de estar usando un navegador compatible (Chrome, Edge, Safari) y que la app cumpla con los requisitos de instalación.');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -117,22 +174,26 @@ const Login: React.FC = () => {
             <IonIcon icon={arrowBack} />
           </IonButton>
           <IonTitle className="auth-title">Iniciar Sesión</IonTitle>
-          <IonButton
-            fill="clear"
-            slot="end"
-            onClick={handleDownloadApp}
-            style={{
-              '--color': 'white',
-              fontSize: '12px',
-              fontWeight: '400',
-              textTransform: 'none',
-              '--padding-start': '8px',
-              '--padding-end': '8px'
-            }}
-          >
-            <IonIcon icon={download} style={{ fontSize: '16px', marginRight: '4px' }} />
-            <span style={{ fontSize: '11px' }}>Descargar App</span>
-          </IonButton>
+          {!isInstalled && (
+            <IonButton
+              fill="clear"
+              slot="end"
+              onClick={handleDownloadApp}
+              disabled={!isInstallable && !isInstalled}
+              style={{
+                '--color': 'white',
+                fontSize: '12px',
+                fontWeight: '400',
+                textTransform: 'none',
+                '--padding-start': '8px',
+                '--padding-end': '8px',
+                opacity: isInstallable ? 1 : 0.6
+              }}
+            >
+              <IonIcon icon={download} style={{ fontSize: '16px', marginRight: '4px' }} />
+              <span style={{ fontSize: '11px' }}>Instalar App</span>
+            </IonButton>
+          )}
         </IonToolbar>
       </IonHeader>
 
