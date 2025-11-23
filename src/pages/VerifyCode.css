@@ -1,0 +1,262 @@
+/* Verify Code Page Styles */
+.verify-code-page {
+  --background: #ffffff;
+}
+
+.auth-toolbar {
+  --background: #dc2626;
+  --color: white;
+}
+
+.auth-title {
+  color: white;
+  font-weight: bold;
+  font-size: 20px;
+}
+
+.back-button {
+  --color: white;
+  margin-left: 8px;
+}
+
+.auth-content {
+  --background: #ffffff;
+}
+
+.auth-container {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 20px;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 40px;
+  padding-top: 20px;
+}
+
+.verify-icon {
+  font-size: 80px;
+  margin-bottom: 20px;
+  color: #dc2626;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.auth-main-title {
+  color: #1e293b;
+  font-size: 32px;
+  font-weight: bold;
+  margin: 0 0 8px 0;
+}
+
+.auth-subtitle {
+  color: #64748b;
+  font-size: 16px;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.auth-subtitle strong {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.auth-card {
+  border-radius: 24px;
+  box-shadow: 0 10px 40px rgba(220, 38, 38, 0.15);
+  margin: 0;
+  overflow: hidden;
+  background: white;
+}
+
+.auth-card ion-card-content {
+  padding: 32px 24px;
+}
+
+.code-input-container {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.code-input {
+  --background: #f8fafc;
+  --border-radius: 12px;
+  --padding-start: 0;
+  --padding-end: 0;
+  --padding-top: 16px;
+  --padding-bottom: 16px;
+  width: 50px;
+  height: 60px;
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.code-input:focus-within {
+  --background: #ffffff;
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.code-input input {
+  text-align: center;
+  font-size: 24px;
+  font-weight: bold;
+  color: #1e293b;
+}
+
+.auth-submit-button {
+  --background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+  --background-activated: #991b1b;
+  --border-radius: 16px;
+  --padding-top: 16px;
+  --padding-bottom: 16px;
+  --box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
+  margin-top: 24px;
+  font-size: 17px;
+  font-weight: bold;
+  height: 56px;
+  text-transform: none;
+}
+
+.auth-submit-button:disabled {
+  --background: #cbd5e1;
+  --box-shadow: none;
+  opacity: 0.6;
+}
+
+.error-text {
+  margin-top: 12px;
+  margin-bottom: 8px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.error-text p {
+  margin: 0;
+  padding: 8px 12px;
+  background: #fee2e2;
+  border-radius: 8px;
+  color: #dc2626;
+}
+
+.resend-container {
+  text-align: center;
+  margin-top: 24px;
+}
+
+.resend-text {
+  color: #64748b;
+  font-size: 14px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.resend-button {
+  --color: #dc2626;
+  font-weight: 600;
+  margin: 0;
+  height: auto;
+}
+
+.resend-button:disabled {
+  --color: #94a3b8;
+  opacity: 0.6;
+}
+
+.user-info {
+  text-align: center;
+  margin-top: 24px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+}
+
+.user-info-text {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.user-info-text strong {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .auth-container {
+    padding: 16px;
+  }
+
+  .auth-main-title {
+    font-size: 28px;
+  }
+
+  .verify-icon {
+    font-size: 60px;
+  }
+
+  .code-input-container {
+    gap: 8px;
+  }
+
+  .code-input {
+    width: 45px;
+    height: 55px;
+    font-size: 20px;
+  }
+
+  .code-input input {
+    font-size: 20px;
+  }
+
+  .auth-card ion-card-content {
+    padding: 24px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-main-title {
+    font-size: 24px;
+  }
+
+  .auth-subtitle {
+    font-size: 14px;
+  }
+
+  .code-input-container {
+    gap: 6px;
+  }
+
+  .code-input {
+    width: 40px;
+    height: 50px;
+    font-size: 18px;
+  }
+
+  .code-input input {
+    font-size: 18px;
+  }
+
+  .auth-card ion-card-content {
+    padding: 20px 16px;
+  }
+}
+

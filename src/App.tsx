@@ -1,4 +1,5 @@
-import { Redirect, Route } from 'react-router-dom';
+import { Redirect, Route, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import {
   IonApp,
   IonIcon,
@@ -22,6 +23,12 @@ import Tab2 from './pages/Tab2';
 import Tab3 from './pages/Tab3';
 import Tab4 from './pages/Tab4';
 import Tab5 from './pages/Tab5';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import VerifyCode from './pages/VerifyCode';
+import VerifyEmail from './pages/VerifyEmail';
+import ProtectedRoute from './components/ProtectedRoute';
+import authService from './services/authService';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -55,55 +62,119 @@ import './theme/variables.css';
 
 setupIonicReact();
 
-const App: React.FC = () => (
-  <IonApp>
-    <IonReactRouter>
-      <IonTabs>
-        <IonRouterOutlet>
-          <Route exact path="/tab1">
-            <Tab1 />
-          </Route>
-          <Route exact path="/tab2">
-            <Tab2 />
-          </Route>
-          <Route path="/tab3">
-            <Tab3 />
-          </Route>
-          <Route path="/tab4">
-            <Tab4 />
-          </Route>
-          <Route path="/tab5">
-            <Tab5 />
-          </Route>
-          <Route exact path="/">
-            <Redirect to="/tab1" />
-          </Route>
-        </IonRouterOutlet>
-        <IonTabBar slot="bottom">
-          <IonTabButton tab="tab1" href="/tab1">
-            <IonIcon aria-hidden="true" icon={library} />
-            <IonLabel>Pokédex</IonLabel>
-          </IonTabButton>
-          <IonTabButton tab="tab2" href="/tab2">
-            <IonIcon aria-hidden="true" icon={people} />
-            <IonLabel>Mi Equipo</IonLabel>
-          </IonTabButton>
-          <IonTabButton tab="tab3" href="/tab3">
-            <IonIcon aria-hidden="true" icon={desktop} />
-            <IonLabel>PC</IonLabel>
-          </IonTabButton>
-          <IonTabButton tab="tab4" href="/tab4">
-            <IonIcon aria-hidden="true" icon={camera} />
-            <IonLabel>Capturar</IonLabel>
-          </IonTabButton>
-          <IonTabButton tab="tab5" href="/tab5">
-            <IonIcon aria-hidden="true" icon={person} />
-            <IonLabel>Perfil</IonLabel>
-          </IonTabButton>
-        </IonTabBar>
-      </IonTabs>
-    </IonReactRouter>
-  </IonApp>
-);
+const AppContent: React.FC = () => {
+  const location = useLocation();
+  const [isAuthenticated, setIsAuthenticated] = useState(authService.isAuthenticated());
+
+  // Actualizar el estado de autenticación cuando cambie la ruta
+  useEffect(() => {
+    setIsAuthenticated(authService.isAuthenticated());
+  }, [location.pathname]);
+
+  // También verificar cuando cambia el localStorage (logout/login)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setIsAuthenticated(authService.isAuthenticated());
+    };
+
+    // Escuchar cambios en localStorage
+    window.addEventListener('storage', handleStorageChange);
+    
+    // También verificar periódicamente (para cambios en la misma ventana)
+    const interval = setInterval(() => {
+      const currentAuth = authService.isAuthenticated();
+      if (currentAuth !== isAuthenticated) {
+        setIsAuthenticated(currentAuth);
+      }
+    }, 100);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [isAuthenticated]);
+
+  return (
+    <>
+      {isAuthenticated ? (
+          <IonTabs>
+            <IonRouterOutlet>
+              <Route exact path="/tab1">
+                <Tab1 />
+              </Route>
+              <Route exact path="/tab2">
+                <Tab2 />
+              </Route>
+              <Route path="/tab3">
+                <Tab3 />
+              </Route>
+              <Route path="/tab4">
+                <Tab4 />
+              </Route>
+              <Route path="/tab5">
+                <Tab5 />
+              </Route>
+              <Route exact path="/">
+                <Redirect to="/tab1" />
+              </Route>
+            </IonRouterOutlet>
+            <IonTabBar slot="bottom">
+              <IonTabButton tab="tab1" href="/tab1">
+                <IonIcon aria-hidden="true" icon={library} />
+                <IonLabel>Pokédex</IonLabel>
+              </IonTabButton>
+              <IonTabButton tab="tab2" href="/tab2">
+                <IonIcon aria-hidden="true" icon={people} />
+                <IonLabel>Mi Equipo</IonLabel>
+              </IonTabButton>
+              <IonTabButton tab="tab3" href="/tab3">
+                <IonIcon aria-hidden="true" icon={desktop} />
+                <IonLabel>PC</IonLabel>
+              </IonTabButton>
+              <IonTabButton tab="tab4" href="/tab4">
+                <IonIcon aria-hidden="true" icon={camera} />
+                <IonLabel>Capturar</IonLabel>
+              </IonTabButton>
+              <IonTabButton tab="tab5" href="/tab5">
+                <IonIcon aria-hidden="true" icon={person} />
+                <IonLabel>Perfil</IonLabel>
+              </IonTabButton>
+            </IonTabBar>
+          </IonTabs>
+        ) : (
+          <IonRouterOutlet>
+            <Route exact path="/login">
+              <Login />
+            </Route>
+            <Route exact path="/register">
+              <Register />
+            </Route>
+            <Route exact path="/verify-code">
+              <VerifyCode />
+            </Route>
+            <Route exact path="/verify-email">
+              <VerifyEmail />
+            </Route>
+            <Route exact path="/">
+              <Redirect to="/login" />
+            </Route>
+            <Route>
+              <Redirect to="/login" />
+            </Route>
+          </IonRouterOutlet>
+        )}
+    </>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <IonApp>
+      <IonReactRouter>
+        <AppContent />
+      </IonReactRouter>
+    </IonApp>
+  );
+};
 
 export default App;

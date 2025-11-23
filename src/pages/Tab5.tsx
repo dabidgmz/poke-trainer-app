@@ -5,7 +5,7 @@ import {
   IonCard, IonCardContent, IonCardHeader, IonCardTitle,
   IonAvatar, IonButton, IonIcon, IonItem, IonLabel,
   IonInput, IonSelect, IonSelectOption, IonModal,
-  IonList, IonAlert, IonChip, IonBadge
+  IonList, IonAlert, IonChip, IonBadge, IonSpinner, IonText
 } from '@ionic/react';
 import { 
   person, 
@@ -18,8 +18,14 @@ import {
   camera,
   checkmarkCircle,
   close,
-  saveOutline
+  saveOutline,
+  shieldCheckmark,
+  ban,
+  calendar,
+  time
 } from 'ionicons/icons';
+import { useHistory } from 'react-router-dom';
+import authService, { User } from '../services/authService';
 import './Tab5.css';
 
 interface UserProfile {
@@ -32,10 +38,12 @@ interface UserProfile {
 }
 
 const Tab5: React.FC = () => {
+  const history = useHistory();
+  const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile>({
-    name: 'Ash Ketchum',
-    email: 'ash@pokemon.com',
-    phone: '+52 123 456 7890',
+    name: '',
+    email: '',
+    phone: '',
     gender: 'male',
     trainerImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png',
     trainerId: 1
@@ -44,6 +52,9 @@ const Tab5: React.FC = () => {
   const [editProfile, setEditProfile] = useState<UserProfile>(profile);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showLogoutAlert, setShowLogoutAlert] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Imágenes de entrenadores
   const trainerImages = [
@@ -57,6 +68,41 @@ const Tab5: React.FC = () => {
     'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/151.png', // Mew
   ];
 
+  // Cargar perfil al montar
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const loadProfile = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const userData = await authService.getProfile();
+      setUser(userData);
+      
+      // Convertir datos del API al formato del componente
+      const profileData: UserProfile = {
+        name: userData.name,
+        email: userData.email,
+        phone: userData.phone || '',
+        gender: (userData.gender?.toLowerCase() as 'male' | 'female' | 'other') || 'male',
+        trainerImage: trainerImages[userData.id % trainerImages.length],
+        trainerId: userData.id
+      };
+      
+      setProfile(profileData);
+      setEditProfile(profileData);
+    } catch (err: any) {
+      setError(err.message || 'Error al cargar el perfil');
+      // Si no está autenticado, redirigir a login
+      if (err.message === 'No autenticado') {
+        history.push('/login');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const changeTrainerImage = () => {
     const randomIndex = Math.floor(Math.random() * trainerImages.length);
     setEditProfile({
@@ -66,9 +112,36 @@ const Tab5: React.FC = () => {
     });
   };
 
-  const handleSaveProfile = () => {
-    setProfile(editProfile);
-    setShowEditModal(false);
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    
+    setIsSaving(true);
+    setError(null);
+    
+    try {
+      const updateData: any = {};
+      if (editProfile.name !== profile.name) updateData.name = editProfile.name;
+      if (editProfile.email !== profile.email) updateData.email = editProfile.email;
+      if (editProfile.phone !== profile.phone) updateData.phone = editProfile.phone;
+      if (editProfile.gender !== profile.gender) {
+        updateData.gender = editProfile.gender === 'male' ? 'Masculino' : 
+                           editProfile.gender === 'female' ? 'Femenino' : 'Otro';
+      }
+
+      const response = await authService.updateProfile(user.id, updateData);
+      
+      // Actualizar perfil local
+      setProfile(editProfile);
+      if (response.entrenador) {
+        setUser(response.entrenador);
+      }
+      
+      setShowEditModal(false);
+    } catch (err: any) {
+      setError(err.message || 'Error al actualizar el perfil');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -80,10 +153,15 @@ const Tab5: React.FC = () => {
     setShowLogoutAlert(true);
   };
 
-  const confirmLogout = () => {
-    // Aquí irían las acciones de cierre de sesión
-    console.log('Sesión cerrada');
-    // Podrías redirigir o limpiar datos
+  const confirmLogout = async () => {
+    try {
+      await authService.logout();
+      history.push('/login');
+    } catch (err: any) {
+      console.error('Error al cerrar sesión:', err);
+      // Aún así redirigir a login
+      history.push('/login');
+    }
   };
 
   return (
@@ -95,69 +173,86 @@ const Tab5: React.FC = () => {
       </IonHeader>
 
       <IonContent style={{ '--background': '#f1f5f9' }}>
-        {/* Header con foto de perfil */}
-        <div style={{
-          background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
-          padding: '40px 20px 80px',
-          textAlign: 'center',
-          position: 'relative',
-          marginBottom: '0'
-        }}>
-          <div style={{
-            position: 'relative',
-            display: 'inline-block',
-            marginBottom: '16px'
-          }}>
-            <IonAvatar style={{
-              width: '120px',
-              height: '120px',
-              margin: '0 auto',
-              border: '4px solid white',
-              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)'
-            }}>
-              <img src={profile.trainerImage} alt="Trainer" />
-            </IonAvatar>
-            <div style={{
-              position: 'absolute',
-              bottom: '0',
-              right: '0',
-              backgroundColor: '#10b981',
-              borderRadius: '50%',
-              width: '36px',
-              height: '36px',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              border: '3px solid white',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
-            }}>
-              <IonIcon icon={checkmarkCircle} style={{ fontSize: '20px', color: 'white' }} />
-            </div>
+        {isLoading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+            <IonSpinner name="crescent" />
           </div>
+        ) : error ? (
+          <div style={{ padding: '20px', textAlign: 'center' }}>
+            <IonText color="danger">
+              <p>{error}</p>
+            </IonText>
+            <IonButton onClick={loadProfile} style={{ marginTop: '16px' }}>
+              Reintentar
+            </IonButton>
+          </div>
+        ) : (
+          <>
+            {/* Header con foto de perfil */}
+            <div style={{
+              background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
+              padding: '40px 20px 80px',
+              textAlign: 'center',
+              position: 'relative',
+              marginBottom: '0'
+            }}>
+              <div style={{
+                position: 'relative',
+                display: 'inline-block',
+                marginBottom: '16px'
+              }}>
+                <IonAvatar style={{
+                  width: '120px',
+                  height: '120px',
+                  margin: '0 auto',
+                  border: '4px solid white',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)'
+                }}>
+                  <img src={profile.trainerImage} alt="Trainer" />
+                </IonAvatar>
+                {user?.isVerified && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '0',
+                    right: '0',
+                    backgroundColor: '#10b981',
+                    borderRadius: '50%',
+                    width: '36px',
+                    height: '36px',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    border: '3px solid white',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
+                  }}>
+                    <IonIcon icon={checkmarkCircle} style={{ fontSize: '20px', color: 'white' }} />
+                  </div>
+                )}
+              </div>
 
-          <h2 style={{
-            color: 'white',
-            fontSize: '28px',
-            fontWeight: 'bold',
-            marginBottom: '4px',
-            textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
-          }}>
-            {profile.name}
-          </h2>
-          
-          <IonChip style={{
-            '--background': 'rgba(255, 255, 255, 0.2)',
-            '--color': 'white',
-            fontWeight: '600',
-            backdropFilter: 'blur(10px)'
-          }}>
-            <IonIcon icon={person} />
-            <IonLabel>Entrenador Pokémon</IonLabel>
-          </IonChip>
-        </div>
+              <h2 style={{
+                color: 'white',
+                fontSize: '28px',
+                fontWeight: 'bold',
+                marginBottom: '4px',
+                textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
+              }}>
+                {profile.name}
+              </h2>
+              
+              <IonChip style={{
+                '--background': 'rgba(255, 255, 255, 0.2)',
+                '--color': 'white',
+                fontWeight: '600',
+                backdropFilter: 'blur(10px)'
+              }}>
+                <IonIcon icon={person} />
+                <IonLabel>{user?.role === 'profesor' ? 'Profesor Pokémon' : 'Entrenador Pokémon'}</IonLabel>
+              </IonChip>
+            </div>
 
-        {/* Información del perfil */}
-        <div style={{ padding: '0 16px', marginTop: '-50px', paddingBottom: '100px' }}>
+            {/* Información del perfil */}
+            <div style={{ padding: '0 16px', marginTop: '-50px', paddingBottom: '100px' }}>
           <IonCard style={{
             borderRadius: '20px',
             boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
@@ -227,33 +322,141 @@ const Tab5: React.FC = () => {
                 </div>
                   <IonLabel>
                     <h3 style={{ fontWeight: '700', color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>Teléfono</h3>
-                    <p style={{ fontSize: '16px', color: '#1e293b', fontWeight: '600', margin: 0 }}>{profile.phone}</p>
+                    <p style={{ fontSize: '16px', color: '#1e293b', fontWeight: '600', margin: 0 }}>
+                      {profile.phone || 'No especificado'}
+                    </p>
                   </IonLabel>
                 </IonItem>
 
-                <IonItem style={{ '--padding-start': '20px', '--padding-end': '20px', '--min-height': '70px', '--border-color': 'transparent' }}>
+                {profile.gender && (
+                  <IonItem style={{ '--padding-start': '20px', '--padding-end': '20px', '--min-height': '70px', '--border-color': 'transparent' }}>
+                    <div style={{
+                      width: '44px',
+                      height: '44px',
+                      borderRadius: '12px',
+                      backgroundColor: profile.gender === 'male' ? '#dbeafe' : '#fce7f3',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginRight: '16px'
+                    }}>
+                      <IonIcon 
+                        icon={profile.gender === 'male' ? male : female} 
+                        style={{ fontSize: '24px', color: profile.gender === 'male' ? '#3b82f6' : '#ec4899' }} 
+                      />
+                    </div>
+                    <IonLabel>
+                      <h3 style={{ fontWeight: '700', color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>Género</h3>
+                      <p style={{ fontSize: '18px', color: '#1e293b', fontWeight: '600', margin: 0 }}>
+                        {profile.gender === 'male' ? 'Masculino' : profile.gender === 'female' ? 'Femenino' : 'Otro'}
+                      </p>
+                    </IonLabel>
+                  </IonItem>
+                )}
+
+                {/* Estado de verificación */}
+                <IonItem style={{ '--padding-start': '20px', '--padding-end': '20px', '--min-height': '70px' }}>
                   <div style={{
                     width: '44px',
                     height: '44px',
                     borderRadius: '12px',
-                    backgroundColor: profile.gender === 'male' ? '#dbeafe' : '#fce7f3',
+                    backgroundColor: user?.isVerified ? '#d1fae5' : '#fee2e2',
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
                     marginRight: '16px'
                   }}>
-                    <IonIcon 
-                      icon={profile.gender === 'male' ? male : female} 
-                      style={{ fontSize: '24px', color: profile.gender === 'male' ? '#3b82f6' : '#ec4899' }} 
-                    />
-              </div>
+                    <IonIcon icon={user?.isVerified ? checkmarkCircle : close} style={{ fontSize: '24px', color: user?.isVerified ? '#10b981' : '#ef4444' }} />
+                  </div>
                   <IonLabel>
-                    <h3 style={{ fontWeight: '700', color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>Género</h3>
-                    <p style={{ fontSize: '18px', color: '#1e293b', fontWeight: '600', margin: 0 }}>
-                      {profile.gender === 'male' ? 'Masculino' : profile.gender === 'female' ? 'Femenino' : 'Otro'}
+                    <h3 style={{ fontWeight: '700', color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>Estado de Verificación</h3>
+                    <p style={{ fontSize: '16px', color: '#1e293b', fontWeight: '600', margin: 0 }}>
+                      {user?.isVerified ? 'Cuenta Verificada' : 'Cuenta No Verificada'}
                     </p>
                   </IonLabel>
                 </IonItem>
+
+                {/* Estado de ban */}
+                {user?.isBanned && (
+                  <IonItem style={{ '--padding-start': '20px', '--padding-end': '20px', '--min-height': '70px', '--background': '#fee2e2' }}>
+                    <div style={{
+                      width: '44px',
+                      height: '44px',
+                      borderRadius: '12px',
+                      backgroundColor: '#fee2e2',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginRight: '16px'
+                    }}>
+                      <IonIcon icon={ban} style={{ fontSize: '24px', color: '#ef4444' }} />
+                    </div>
+                    <IonLabel>
+                      <h3 style={{ fontWeight: '700', color: '#991b1b', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>Estado de Cuenta</h3>
+                      <p style={{ fontSize: '16px', color: '#991b1b', fontWeight: '600', margin: 0 }}>
+                        Cuenta Baneada
+                      </p>
+                    </IonLabel>
+                  </IonItem>
+                )}
+
+                {/* Fecha de creación */}
+                {user?.createdAt && (
+                  <IonItem style={{ '--padding-start': '20px', '--padding-end': '20px', '--min-height': '70px' }}>
+                    <div style={{
+                      width: '44px',
+                      height: '44px',
+                      borderRadius: '12px',
+                      backgroundColor: '#f3e8ff',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginRight: '16px'
+                    }}>
+                      <IonIcon icon={calendar} style={{ fontSize: '24px', color: '#9333ea' }} />
+                    </div>
+                    <IonLabel>
+                      <h3 style={{ fontWeight: '700', color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>Fecha de Registro</h3>
+                      <p style={{ fontSize: '16px', color: '#1e293b', fontWeight: '600', margin: 0 }}>
+                        {new Date(user.createdAt).toLocaleDateString('es-ES', { 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })}
+                      </p>
+                    </IonLabel>
+                  </IonItem>
+                )}
+
+                {/* Fecha de actualización */}
+                {user?.updatedAt && (
+                  <IonItem style={{ '--padding-start': '20px', '--padding-end': '20px', '--min-height': '70px', '--border-color': 'transparent' }}>
+                    <div style={{
+                      width: '44px',
+                      height: '44px',
+                      borderRadius: '12px',
+                      backgroundColor: '#fef3c7',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginRight: '16px'
+                    }}>
+                      <IonIcon icon={time} style={{ fontSize: '24px', color: '#f59e0b' }} />
+                    </div>
+                    <IonLabel>
+                      <h3 style={{ fontWeight: '700', color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>Última Actualización</h3>
+                      <p style={{ fontSize: '16px', color: '#1e293b', fontWeight: '600', margin: 0 }}>
+                        {new Date(user.updatedAt).toLocaleDateString('es-ES', { 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    </IonLabel>
+                  </IonItem>
+                )}
               </IonList>
             </IonCardContent>
           </IonCard>
@@ -299,8 +502,9 @@ const Tab5: React.FC = () => {
               Cerrar Sesión
             </IonButton>
           </div>
-
-        </div>
+            </div>
+          </>
+        )}
 
         {/* Modal de edición */}
         <IonModal isOpen={showEditModal} onDidDismiss={() => setShowEditModal(false)}>
@@ -387,6 +591,13 @@ const Tab5: React.FC = () => {
                   </IonItem>
         </IonList>
 
+              {/* Error message */}
+              {error && (
+                <IonText color="danger" style={{ display: 'block', marginTop: '16px', textAlign: 'center' }}>
+                  <p>{error}</p>
+                </IonText>
+              )}
+
               {/* Botones del modal */}
               <div style={{ padding: '20px 0', display: 'flex', gap: '12px' }}>
                 <IonButton
@@ -394,19 +605,27 @@ const Tab5: React.FC = () => {
                   fill="outline"
                   onClick={handleCancelEdit}
                   style={{ flex: 1 }}
+                  disabled={isSaving}
                 >
                   <IonIcon icon={close} slot="start" />
                   Cancelar
                 </IonButton>
-                    <IonButton 
-            expand="block" 
+                <IonButton 
+                  expand="block" 
                   onClick={handleSaveProfile}
                   style={{ flex: 1 }}
                   color="success"
+                  disabled={isSaving}
                 >
-                  <IonIcon icon={saveOutline} slot="start" />
-                  Guardar
-                    </IonButton>
+                  {isSaving ? (
+                    <IonSpinner name="crescent" />
+                  ) : (
+                    <>
+                      <IonIcon icon={saveOutline} slot="start" />
+                      Guardar
+                    </>
+                  )}
+                </IonButton>
               </div>
         </div>
           </IonContent>

@@ -1,0 +1,217 @@
+/* Register Page Styles - Reutiliza estilos de Login */
+.register-page {
+  --background: #ffffff;
+}
+
+.auth-toolbar {
+  --background: #dc2626;
+  --color: white;
+}
+
+.auth-title {
+  color: white;
+  font-weight: bold;
+  font-size: 20px;
+}
+
+.back-button {
+  --color: white;
+  margin-left: 8px;
+}
+
+.auth-content {
+  --background: #ffffff;
+}
+
+.auth-container {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 20px;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding-top: 20px;
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 30px;
+  padding-top: 10px;
+}
+
+.pokeball-icon {
+  font-size: 80px;
+  margin-bottom: 20px;
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.auth-main-title {
+  color: #1e293b;
+  font-size: 32px;
+  font-weight: bold;
+  margin: 0 0 8px 0;
+}
+
+.auth-subtitle {
+  color: #64748b;
+  font-size: 16px;
+  margin: 0;
+}
+
+.auth-card {
+  border-radius: 24px;
+  box-shadow: 0 10px 40px rgba(220, 38, 38, 0.15);
+  margin: 0;
+  overflow: hidden;
+  background: white;
+}
+
+.auth-card ion-card-content {
+  padding: 32px 24px;
+}
+
+.auth-input-item {
+  --background: #f8fafc;
+  --border-radius: 16px;
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --padding-top: 12px;
+  --padding-bottom: 12px;
+  margin-bottom: 20px;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.auth-input-item:focus-within {
+  --background: #ffffff;
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.auth-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.label-icon {
+  font-size: 18px;
+  color: #dc2626;
+}
+
+.auth-input {
+  --padding-start: 0;
+  --padding-end: 0;
+  font-size: 16px;
+  color: #1e293b;
+}
+
+.auth-select {
+  --padding-start: 0;
+  --padding-end: 0;
+  font-size: 16px;
+  color: #1e293b;
+  width: 100%;
+}
+
+.auth-submit-button {
+  --background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+  --background-activated: #991b1b;
+  --border-radius: 16px;
+  --padding-top: 16px;
+  --padding-bottom: 16px;
+  --box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
+  margin-top: 24px;
+  font-size: 17px;
+  font-weight: bold;
+  height: 56px;
+  text-transform: none;
+}
+
+.auth-submit-button:disabled {
+  --background: #cbd5e1;
+  --box-shadow: none;
+  opacity: 0.6;
+}
+
+.error-text {
+  margin-top: 12px;
+  margin-bottom: 8px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.error-text p {
+  margin: 0;
+  padding: 8px 12px;
+  background: #fee2e2;
+  border-radius: 8px;
+  color: #dc2626;
+}
+
+.auth-footer {
+  text-align: center;
+  margin-top: 24px;
+  margin-bottom: 20px;
+}
+
+.auth-footer-text {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.auth-link-button {
+  --color: #dc2626;
+  font-weight: 600;
+  text-decoration: underline;
+  margin: 0;
+  height: auto;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .auth-container {
+    padding: 16px;
+  }
+
+  .auth-main-title {
+    font-size: 28px;
+  }
+
+  .pokeball-icon {
+    font-size: 60px;
+  }
+
+  .auth-card ion-card-content {
+    padding: 24px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-main-title {
+    font-size: 24px;
+  }
+
+  .auth-subtitle {
+    font-size: 14px;
+  }
+
+  .auth-card ion-card-content {
+    padding: 20px 16px;
+  }
+}
+
