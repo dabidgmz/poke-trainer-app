@@ -1,4 +1,6 @@
 // Servicio de autenticación para la API de entrenadores
+import offlineCache from './offlineCache';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333';
 
 export interface RegisterData {
@@ -115,21 +117,48 @@ class AuthService {
   }
 
   async getProfile(): Promise<User> {
-    const response = await fetch(`${API_BASE_URL}/auth/me`, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
 
-    if (!response.ok) {
-      if (response.status === 401) {
-        this.removeToken();
-        throw new Error('No autenticado');
+      if (!response.ok) {
+        if (response.status === 401) {
+          this.removeToken();
+          throw new Error('No autenticado');
+        }
+        const error = await response.json();
+        throw new Error(error.message || 'Error al obtener el perfil');
       }
-      const error = await response.json();
-      throw new Error(error.message || 'Error al obtener el perfil');
-    }
 
-    return response.json();
+      const profileData = await response.json();
+      // Guardar en caché cuando se obtiene exitosamente (backup en localStorage)
+      offlineCache.saveProfile(profileData);
+      return profileData;
+    } catch (error: any) {
+      // Si falla la conexión, intentar obtener del caché del service worker
+      if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+        if ('caches' in window) {
+          try {
+            const cache = await caches.open('pokemon-profile-cache');
+            const cachedResponse = await cache.match(`${API_BASE_URL}/auth/me`);
+            if (cachedResponse) {
+              const profileData = await cachedResponse.json();
+              return profileData;
+            }
+          } catch (cacheError) {
+            console.error('Error obteniendo del caché del service worker:', cacheError);
+          }
+        }
+        // Fallback a localStorage
+        const cachedProfile = offlineCache.getProfile();
+        if (cachedProfile) {
+          return cachedProfile;
+        }
+      }
+      throw error;
+    }
   }
 
   async getTeam(): Promise<{ team: any[]; teamCount: number; maxTeamSize: number }> {
@@ -151,9 +180,30 @@ class AuthService {
         throw new Error(error.message || 'Error al obtener el equipo');
       }
 
-      return response.json();
+      const teamData = await response.json();
+      // Guardar en caché cuando se obtiene exitosamente (backup en localStorage)
+      offlineCache.saveTeam(teamData);
+      return teamData;
     } catch (error: any) {
+      // Si falla la conexión, intentar obtener del caché del service worker
       if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+        if ('caches' in window) {
+          try {
+            const cache = await caches.open('pokemon-team-cache');
+            const cachedResponse = await cache.match(`${API_BASE_URL}/entrenadores/me/team`);
+            if (cachedResponse) {
+              const teamData = await cachedResponse.json();
+              return teamData;
+            }
+          } catch (cacheError) {
+            console.error('Error obteniendo del caché del service worker:', cacheError);
+          }
+        }
+        // Fallback a localStorage
+        const cachedTeam = offlineCache.getTeam();
+        if (cachedTeam) {
+          return cachedTeam;
+        }
         throw new Error(`No se pudo conectar con la API. Verifica que el servidor esté corriendo en ${API_BASE_URL}`);
       }
       throw error;

@@ -19,6 +19,8 @@ import {
 } from 'ionicons/icons';
 import { Torch } from '@capawesome/capacitor-torch';
 import ProfileButton from '../components/ProfileButton';
+import OfflineMessage from '../components/OfflineMessage';
+import offlineCache from '../services/offlineCache';
 import './Tab6.css';
 
 // Hook personalizado para la linterna usando getUserMedia (basado en Vue)
@@ -96,6 +98,7 @@ const Tab6: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [useWebTorch, setUseWebTorch] = useState(false);
   
   // Estados para detección de movimiento
@@ -399,6 +402,20 @@ const Tab6: React.FC = () => {
     checkTorchAvailability();
   }, []);
 
+  // Detectar cambios en la conexión
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   // Mostrar alerta
   const showAlertDialog = async (message: string) => {
     const alert = await alertController.create({
@@ -419,6 +436,10 @@ const Tab6: React.FC = () => {
       </IonHeader>
 
       <IonContent scrollY>
+        {!isOnline ? (
+          <OfflineMessage onRetry={() => setIsOnline(navigator.onLine)} />
+        ) : (
+          <>
         {/* Alerta */}
         <IonAlert
           isOpen={showAlert}
@@ -681,6 +702,8 @@ const Tab6: React.FC = () => {
                 </div>
           </IonCardContent>
         </IonCard>
+        )}
+        </>
         )}
 
       </IonContent>

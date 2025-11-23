@@ -11,7 +11,39 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}']
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.includes('/entrenadores/me/team'),
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'pokemon-team-cache',
+              expiration: {
+                maxEntries: 1,
+                maxAgeSeconds: 24 * 60 * 60, // 24 horas
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+              networkTimeoutSeconds: 3,
+            },
+          },
+          {
+            urlPattern: ({ url }) => url.pathname.includes('/auth/me'),
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'pokemon-profile-cache',
+              expiration: {
+                maxEntries: 1,
+                maxAgeSeconds: 24 * 60 * 60, // 24 horas
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+              networkTimeoutSeconds: 3,
+            },
+          },
+        ],
       },
       manifest: {
         name: 'Pokémon Trainer App',

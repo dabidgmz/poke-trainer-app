@@ -41,6 +41,8 @@ import authService from '../services/authService';
 import { useHistory } from 'react-router-dom';
 import { alertController } from '@ionic/core';
 import ProfileButton from '../components/ProfileButton';
+import OfflineMessage from '../components/OfflineMessage';
+import offlineCache from '../services/offlineCache';
 import './Tab4.css';
 
 interface CapturedPokemon {
@@ -67,6 +69,7 @@ const Tab4: React.FC = () => {
   const [showCaptureAlert, setShowCaptureAlert] = useState(false);
   const [newPokemon, setNewPokemon] = useState<CapturedPokemon | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [cameraPermission, setCameraPermission] = useState<'unknown' | 'granted' | 'denied' | 'prompt'>('unknown');
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isRequestingPermissions, setIsRequestingPermissions] = useState(false);
@@ -524,6 +527,20 @@ const Tab4: React.FC = () => {
     };
   }, []);
 
+  // Detectar cambios en la conexión
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   // Si se debe mostrar el QR Scanner, renderizarlo
   if (showQRScanner) {
     return (
@@ -552,7 +569,10 @@ const Tab4: React.FC = () => {
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen className="capture-content">
-        <div className="capture-body">
+        {!isOnline ? (
+          <OfflineMessage onRetry={() => setIsOnline(navigator.onLine)} />
+        ) : (
+          <div className="capture-body">
           {/* Cámara de captura */}
           <div className="camera-container">
             {!isScanning ? (
@@ -761,6 +781,7 @@ const Tab4: React.FC = () => {
             </div>
           )}
         </div>
+        )}
 
         {/* Modal de selección de caja (equipo lleno) */}
         <IonModal isOpen={showBoxSelection} onDidDismiss={cancelBoxSelection}>

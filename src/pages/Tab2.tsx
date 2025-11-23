@@ -24,6 +24,7 @@ import {
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import authService from '../services/authService';
+import offlineCache from '../services/offlineCache';
 import ProfileButton from '../components/ProfileButton';
 import './Tab2.css';
 
@@ -106,6 +107,25 @@ const Tab2: React.FC = () => {
       setIsLoading(true);
       setError(null);
       
+      // Si no hay internet, intentar cargar del caché
+      if (!offlineCache.isOnline()) {
+        const cachedTeam = offlineCache.getTeam();
+        if (cachedTeam) {
+          const mappedTeam = cachedTeam.team.map(mapTeamMemberToPokemon);
+          setPokemonTeam(mappedTeam);
+          setTeamInfo({
+            teamCount: cachedTeam.teamCount,
+            maxTeamSize: cachedTeam.maxTeamSize
+          });
+          setIsLoading(false);
+          return;
+        } else {
+          setError('Sin conexión a internet y no hay datos en caché');
+          setIsLoading(false);
+          return;
+        }
+      }
+      
       try {
         const response: TeamResponse = await authService.getTeam();
         const mappedTeam = response.team.map(mapTeamMemberToPokemon);
@@ -115,6 +135,20 @@ const Tab2: React.FC = () => {
           maxTeamSize: response.maxTeamSize
         });
       } catch (err: any) {
+        // Si falla la conexión, intentar usar el caché
+        if (err.message?.includes('No se pudo conectar') || err.message === 'Failed to fetch') {
+          const cachedTeam = offlineCache.getTeam();
+          if (cachedTeam) {
+            const mappedTeam = cachedTeam.team.map(mapTeamMemberToPokemon);
+            setPokemonTeam(mappedTeam);
+            setTeamInfo({
+              teamCount: cachedTeam.teamCount,
+              maxTeamSize: cachedTeam.maxTeamSize
+            });
+            setError('Modo offline: mostrando datos guardados');
+            return;
+          }
+        }
         setError(err.message || 'Error al cargar el equipo');
         if (err.message === 'No autenticado') {
           history.push('/login');

@@ -26,6 +26,7 @@ import {
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import authService, { User } from '../services/authService';
+import offlineCache from '../services/offlineCache';
 import './Tab5.css';
 
 interface UserProfile {
@@ -55,6 +56,7 @@ const Tab5: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   // Imágenes de entrenadores
   const trainerImages = [
@@ -73,9 +75,48 @@ const Tab5: React.FC = () => {
     loadProfile();
   }, []);
 
+  // Detectar cambios en la conexión
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   const loadProfile = async () => {
     setIsLoading(true);
     setError(null);
+    
+    // Si no hay internet, intentar cargar del caché
+    if (!offlineCache.isOnline()) {
+      const cachedProfile = offlineCache.getProfile();
+      if (cachedProfile) {
+        setUser(cachedProfile);
+        const profileData: UserProfile = {
+          name: cachedProfile.name,
+          email: cachedProfile.email,
+          phone: cachedProfile.phone || '',
+          gender: (cachedProfile.gender?.toLowerCase() as 'male' | 'female' | 'other') || 'male',
+          trainerImage: trainerImages[cachedProfile.id % trainerImages.length],
+          trainerId: cachedProfile.id
+        };
+        setProfile(profileData);
+        setEditProfile(profileData);
+        setIsLoading(false);
+        return;
+      } else {
+        setError('Sin conexión a internet y no hay datos en caché');
+        setIsLoading(false);
+        return;
+      }
+    }
+    
     try {
       const userData = await authService.getProfile();
       setUser(userData);
@@ -93,6 +134,25 @@ const Tab5: React.FC = () => {
       setProfile(profileData);
       setEditProfile(profileData);
     } catch (err: any) {
+      // Si falla la conexión, intentar usar el caché
+      if (err.message?.includes('No se pudo conectar') || err.message === 'Failed to fetch') {
+        const cachedProfile = offlineCache.getProfile();
+        if (cachedProfile) {
+          setUser(cachedProfile);
+          const profileData: UserProfile = {
+            name: cachedProfile.name,
+            email: cachedProfile.email,
+            phone: cachedProfile.phone || '',
+            gender: (cachedProfile.gender?.toLowerCase() as 'male' | 'female' | 'other') || 'male',
+            trainerImage: trainerImages[cachedProfile.id % trainerImages.length],
+            trainerId: cachedProfile.id
+          };
+          setProfile(profileData);
+          setEditProfile(profileData);
+          setError('Modo offline: mostrando datos guardados');
+          return;
+        }
+      }
       setError(err.message || 'Error al cargar el perfil');
       // Si no está autenticado, redirigir a login
       if (err.message === 'No autenticado') {
@@ -461,47 +521,49 @@ const Tab5: React.FC = () => {
             </IonCardContent>
           </IonCard>
 
-          {/* Botones de acción */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px', marginBottom: '20px' }}>
-            <IonButton
-              expand="block"
-              onClick={() => {
-                setEditProfile(profile);
-                setShowEditModal(true);
-              }}
-              style={{
-                '--background': 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                '--border-radius': '16px',
-                '--padding-top': '16px',
-                '--padding-bottom': '16px',
-                '--box-shadow': '0 6px 20px rgba(59, 130, 246, 0.4)',
-                fontSize: '17px',
-                fontWeight: 'bold',
-                height: '56px'
-              }}
-            >
-              <IonIcon icon={create} slot="start" style={{ fontSize: '22px' }} />
-              Editar Perfil
-            </IonButton>
+          {/* Botones de acción - Solo visibles cuando hay conexión */}
+          {isOnline && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px', marginBottom: '20px' }}>
+              <IonButton
+                expand="block"
+                onClick={() => {
+                  setEditProfile(profile);
+                  setShowEditModal(true);
+                }}
+                style={{
+                  '--background': 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                  '--border-radius': '16px',
+                  '--padding-top': '16px',
+                  '--padding-bottom': '16px',
+                  '--box-shadow': '0 6px 20px rgba(59, 130, 246, 0.4)',
+                  fontSize: '17px',
+                  fontWeight: 'bold',
+                  height: '56px'
+                }}
+              >
+                <IonIcon icon={create} slot="start" style={{ fontSize: '22px' }} />
+                Editar Perfil
+              </IonButton>
 
-            <IonButton
-              expand="block"
-              onClick={handleLogout}
-              style={{
-                '--background': 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                '--border-radius': '16px',
-                '--padding-top': '16px',
-                '--padding-bottom': '16px',
-                '--box-shadow': '0 6px 20px rgba(239, 68, 68, 0.4)',
-                fontSize: '17px',
-                fontWeight: 'bold',
-                height: '56px'
-              }}
-            >
-              <IonIcon icon={logOut} slot="start" style={{ fontSize: '22px' }} />
-              Cerrar Sesión
-            </IonButton>
-          </div>
+              <IonButton
+                expand="block"
+                onClick={handleLogout}
+                style={{
+                  '--background': 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                  '--border-radius': '16px',
+                  '--padding-top': '16px',
+                  '--padding-bottom': '16px',
+                  '--box-shadow': '0 6px 20px rgba(239, 68, 68, 0.4)',
+                  fontSize: '17px',
+                  fontWeight: 'bold',
+                  height: '56px'
+                }}
+              >
+                <IonIcon icon={logOut} slot="start" style={{ fontSize: '22px' }} />
+                Cerrar Sesión
+              </IonButton>
+            </div>
+          )}
             </div>
           </>
         )}

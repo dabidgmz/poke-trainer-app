@@ -47,6 +47,8 @@ import { NativeBiometric, BiometryType } from '@capgo/capacitor-native-biometric
 import { useHistory } from 'react-router-dom';
 import authService from '../services/authService';
 import ProfileButton from '../components/ProfileButton';
+import OfflineMessage from '../components/OfflineMessage';
+import offlineCache from '../services/offlineCache';
 import './Tab3.css';
 
 interface Pokemon {
@@ -103,6 +105,7 @@ const Tab3: React.FC = () => {
   const [showBiometricAlert, setShowBiometricAlert] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [teamInfo, setTeamInfo] = useState<{ teamCount: number; maxTeamSize: number } | null>(null);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   
   const [pokemonTeam, setPokemonTeam] = useState<Pokemon[]>([]);
   const [pcBoxes, setPcBoxes] = useState<Box[]>([
@@ -638,6 +641,10 @@ const Tab3: React.FC = () => {
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen className="pc-content">
+        {!isOnline ? (
+          <OfflineMessage onRetry={() => setIsOnline(navigator.onLine)} />
+        ) : (
+          <>
         {/* Pantalla de acceso biométrico mejorada */}
         {!isAuthenticated && (
           <div style={{
@@ -1005,6 +1012,8 @@ const Tab3: React.FC = () => {
             }
           ]}
         />
+          </>
+        )}
       </IonContent>
     </IonPage>
   );

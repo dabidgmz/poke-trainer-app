@@ -31,6 +31,8 @@ import {
 } from '@ionic/react';
 import { search, filter, refresh, searchCircle, close, flame, shield, heart, speedometer, star } from 'ionicons/icons';
 import ProfileButton from '../components/ProfileButton';
+import OfflineMessage from '../components/OfflineMessage';
+import offlineCache from '../services/offlineCache';
 import './Tab1.css';
 
 interface PokemonDetails {
@@ -88,6 +90,7 @@ const Pokedex: React.FC = () => {
   const [selectedPokemon, setSelectedPokemon] = useState<PokemonDetails | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   // Función para obtener el color del tipo
   const getTypeColor = (type: string) => {
@@ -188,6 +191,20 @@ const Pokedex: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Detectar cambios en la conexión
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   // Filtro por búsqueda y tipo
   const filteredItems = items.filter(
     (item) =>
@@ -242,7 +259,10 @@ const Pokedex: React.FC = () => {
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen className="pokedex-content">
-        <div className="pokedex-body">
+        {!isOnline ? (
+          <OfflineMessage onRetry={() => setIsOnline(navigator.onLine)} />
+        ) : (
+          <div className="pokedex-body">
           {/* Panel de control superior */}
           <div className="control-panel">
             <div className="search-section">
@@ -420,6 +440,7 @@ const Pokedex: React.FC = () => {
           </div>
 
         </div>
+        )}
 
         <IonInfiniteScroll
           onIonInfinite={async (event) => {
