@@ -261,8 +261,8 @@ const Tab2: React.FC = () => {
                 </div>
               )}
 
-              {/* Lista de Pokémon del equipo */}
-              <div className="team-list-container">
+          {/* Lista de Pokémon del equipo */}
+          <div className="team-list-container">
                 {pokemonTeam.length === 0 ? (
                   <div style={{ 
                     padding: '40px', 
@@ -273,9 +273,9 @@ const Tab2: React.FC = () => {
                     </IonText>
                   </div>
                 ) : (
-                  <IonList className="team-list">
-                    <IonReorderGroup disabled={false} onIonReorderEnd={handleReorderEnd}>
-                      {pokemonTeam.map((pokemon, index) => (
+            <IonList className="team-list">
+              <IonReorderGroup disabled={false} onIonReorderEnd={handleReorderEnd}>
+                {pokemonTeam.map((pokemon, index) => (
                   <IonItem key={pokemon.id} className="pokemon-team-item">
                     <div className="pokemon-team-card">
                       <div className="pokemon-position">
@@ -334,12 +334,12 @@ const Tab2: React.FC = () => {
                         <div className="reorder-icon">⋮⋮</div>
                       </IonReorder>
                     </div>
-                      </IonItem>
-                      ))}
-                    </IonReorderGroup>
-                  </IonList>
+                  </IonItem>
+                ))}
+              </IonReorderGroup>
+            </IonList>
                 )}
-              </div>
+          </div>
             </>
           )}
         </div>

@@ -262,7 +262,7 @@ const Pokedex: React.FC = () => {
         {!isOnline ? (
           <OfflineMessage onRetry={() => setIsOnline(navigator.onLine)} />
         ) : (
-          <div className="pokedex-body">
+        <div className="pokedex-body">
           {/* Panel de control superior */}
           <div className="control-panel">
             <div className="search-section">

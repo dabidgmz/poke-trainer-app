@@ -124,19 +124,19 @@ class AuthService {
 
   async getProfile(): Promise<User> {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/me`, {
-        method: 'GET',
-        headers: this.getAuthHeaders(),
-      });
+    const response = await fetch(`${API_BASE_URL}/auth/me`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          this.removeToken();
-          throw new Error('No autenticado');
-        }
-        const error = await response.json();
-        throw new Error(error.message || 'Error al obtener el perfil');
+    if (!response.ok) {
+      if (response.status === 401) {
+        this.removeToken();
+        throw new Error('No autenticado');
       }
+      const error = await response.json();
+      throw new Error(error.message || 'Error al obtener el perfil');
+    }
 
       const profileData = await response.json();
       // Guardar en caché cuando se obtiene exitosamente (backup en localStorage)
@@ -345,7 +345,7 @@ class AuthService {
         throw new Error(error.message || 'Error al completar la captura');
       }
 
-      return response.json();
+    return response.json();
     } catch (error: any) {
       if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
         throw new Error(`No se pudo conectar con la API. Verifica que el servidor esté corriendo en ${API_BASE_URL}`);

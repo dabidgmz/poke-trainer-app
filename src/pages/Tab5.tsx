@@ -523,46 +523,46 @@ const Tab5: React.FC = () => {
 
           {/* Botones de acción - Solo visibles cuando hay conexión */}
           {isOnline && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px', marginBottom: '20px' }}>
-              <IonButton
-                expand="block"
-                onClick={() => {
-                  setEditProfile(profile);
-                  setShowEditModal(true);
-                }}
-                style={{
-                  '--background': 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                  '--border-radius': '16px',
-                  '--padding-top': '16px',
-                  '--padding-bottom': '16px',
-                  '--box-shadow': '0 6px 20px rgba(59, 130, 246, 0.4)',
-                  fontSize: '17px',
-                  fontWeight: 'bold',
-                  height: '56px'
-                }}
-              >
-                <IonIcon icon={create} slot="start" style={{ fontSize: '22px' }} />
-                Editar Perfil
-              </IonButton>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px', marginBottom: '20px' }}>
+            <IonButton
+              expand="block"
+              onClick={() => {
+                setEditProfile(profile);
+                setShowEditModal(true);
+              }}
+              style={{
+                '--background': 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                '--border-radius': '16px',
+                '--padding-top': '16px',
+                '--padding-bottom': '16px',
+                '--box-shadow': '0 6px 20px rgba(59, 130, 246, 0.4)',
+                fontSize: '17px',
+                fontWeight: 'bold',
+                height: '56px'
+              }}
+            >
+              <IonIcon icon={create} slot="start" style={{ fontSize: '22px' }} />
+              Editar Perfil
+            </IonButton>
 
-              <IonButton
-                expand="block"
-                onClick={handleLogout}
-                style={{
-                  '--background': 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                  '--border-radius': '16px',
-                  '--padding-top': '16px',
-                  '--padding-bottom': '16px',
-                  '--box-shadow': '0 6px 20px rgba(239, 68, 68, 0.4)',
-                  fontSize: '17px',
-                  fontWeight: 'bold',
-                  height: '56px'
-                }}
-              >
-                <IonIcon icon={logOut} slot="start" style={{ fontSize: '22px' }} />
-                Cerrar Sesión
-              </IonButton>
-            </div>
+            <IonButton
+              expand="block"
+              onClick={handleLogout}
+              style={{
+                '--background': 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                '--border-radius': '16px',
+                '--padding-top': '16px',
+                '--padding-bottom': '16px',
+                '--box-shadow': '0 6px 20px rgba(239, 68, 68, 0.4)',
+                fontSize: '17px',
+                fontWeight: 'bold',
+                height: '56px'
+              }}
+            >
+              <IonIcon icon={logOut} slot="start" style={{ fontSize: '22px' }} />
+              Cerrar Sesión
+            </IonButton>
+          </div>
           )}
             </div>
           </>

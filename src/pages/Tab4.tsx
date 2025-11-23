@@ -384,17 +384,28 @@ const Tab4: React.FC = () => {
     setError(null);
     
     try {
-      // El QR code debería contener el pokemonId (número)
-      // Puede venir como "25" o "POKEMON_25" o solo el número
+      // El QR code puede venir como JSON object o como número
       let pokemonId: number;
       
-      // Intentar extraer el número del QR
-      const match = qrCode.match(/\d+/);
-      if (match) {
-        pokemonId = parseInt(match[0], 10);
-      } else {
-        // Si no hay número, intentar parsear directamente
-        pokemonId = parseInt(qrCode, 10);
+      // Intentar parsear como JSON primero
+      try {
+        const qrData = JSON.parse(qrCode);
+        if (qrData && typeof qrData.id === 'number') {
+          pokemonId = qrData.id;
+        } else if (qrData && typeof qrData.pokemonId === 'number') {
+          pokemonId = qrData.pokemonId;
+        } else {
+          throw new Error('El QR code no contiene un ID de Pokémon válido.');
+        }
+      } catch (parseError) {
+        // Si no es JSON, intentar extraer el número del QR
+        const match = qrCode.match(/\d+/);
+        if (match) {
+          pokemonId = parseInt(match[0], 10);
+        } else {
+          // Si no hay número, intentar parsear directamente
+          pokemonId = parseInt(qrCode, 10);
+        }
       }
       
       if (isNaN(pokemonId) || pokemonId <= 0) {
@@ -409,7 +420,7 @@ const Tab4: React.FC = () => {
         setPendingCapture({
           captureId: result.captureId!,
           pokemonId: result.pokemonId!,
-          name: result.name,
+          name: result.name || 'Pokémon',
           rarity: result.rarity
         });
         setShowBoxSelection(true);
@@ -419,9 +430,11 @@ const Tab4: React.FC = () => {
       
       // Si se agregó directamente al equipo
       if (result.placement === 'team') {
+        const pokemonName = result.name || 'Pokémon';
+        const formattedName = pokemonName.charAt(0).toUpperCase() + pokemonName.slice(1);
         const alert = await alertController.create({
           header: '¡Pokémon Capturado!',
-          message: `Has capturado a ${result.name.charAt(0).toUpperCase() + result.name.slice(1)} (${result.rarity}) y se agregó a tu equipo.`,
+          message: `Has capturado a ${formattedName} (${result.rarity}) y se agregó a tu equipo.`,
           buttons: ['OK']
         });
         await alert.present();
@@ -458,9 +471,11 @@ const Tab4: React.FC = () => {
     try {
       const result = await authService.completeCapture(pendingCapture.captureId, boxNumber);
       
+      const pokemonName = result.name || pendingCapture.name || 'Pokémon';
+      const formattedName = pokemonName.charAt(0).toUpperCase() + pokemonName.slice(1);
       const alert = await alertController.create({
         header: '¡Pokémon Capturado!',
-        message: `Has capturado a ${result.name.charAt(0).toUpperCase() + result.name.slice(1)} (${result.rarity}) y se guardó en la caja ${result.pcBox} del PC.`,
+        message: `Has capturado a ${formattedName} (${result.rarity || pendingCapture.rarity}) y se guardó en la caja ${result.pcBox} del PC.`,
         buttons: ['OK']
       });
       await alert.present();
@@ -572,7 +587,7 @@ const Tab4: React.FC = () => {
         {!isOnline ? (
           <OfflineMessage onRetry={() => setIsOnline(navigator.onLine)} />
         ) : (
-          <div className="capture-body">
+        <div className="capture-body">
           {/* Cámara de captura */}
           <div className="camera-container">
             {!isScanning ? (

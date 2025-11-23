@@ -187,21 +187,21 @@ const Tab3: React.FC = () => {
       // Cargar PC
       const pcResponse = await authService.getPC();
       const boxes: Box[] = [
-        {
-          id: 0,
-          name: 'Box 1',
+    {
+      id: 0,
+      name: 'Box 1',
           pokemon: pcResponse.box1.map(m => mapPCMemberToPokemon(m as PCMember, 0))
-        },
-        {
-          id: 1,
-          name: 'Box 2',
+    },
+    {
+      id: 1,
+      name: 'Box 2',
           pokemon: pcResponse.box2.map(m => mapPCMemberToPokemon(m as PCMember, 1))
-        },
-        {
-          id: 2,
-          name: 'Box 3',
+    },
+    {
+      id: 2,
+      name: 'Box 3',
           pokemon: pcResponse.box3.map(m => mapPCMemberToPokemon(m as PCMember, 2))
-        }
+    }
       ];
       setPcBoxes(boxes);
     } catch (err: any) {
@@ -605,7 +605,7 @@ const Tab3: React.FC = () => {
       // Solo verificar biometría si no está autenticado (para no interferir con pruebas)
       if (!isAuthenticated) {
         try {
-          await checkBiometricAvailability();
+      await checkBiometricAvailability();
         } catch (error) {
           console.error('Error verificando biometría:', error);
         }
