@@ -95,7 +95,7 @@ const Tab3: React.FC = () => {
   const history = useHistory();
   const [currentView, setCurrentView] = useState<'team' | 'pc'>('team');
   const [selectedBox, setSelectedBox] = useState(0);
-  const [isAuthenticated, setIsAuthenticated] = useState(true); // Cambiado a true para pruebas
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [biometryAvailable, setBiometryAvailable] = useState(false);
@@ -617,11 +617,6 @@ const Tab3: React.FC = () => {
       loadData();
     }
   }, [isAuthenticated]);
-
-  // Cargar datos al montar el componente (para pruebas)
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const currentBox = pcBoxes[selectedBox];
   const currentPokemon = currentView === 'team' ? pokemonTeam : currentBox.pokemon;
