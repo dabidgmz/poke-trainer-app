@@ -1,7 +1,13 @@
 // Servicio de autenticación para la API de entrenadores
 import offlineCache from './offlineCache';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333';
+// Normalizar la URL base (remover barra final si existe, luego agregar una)
+const getBaseUrl = () => {
+  const url = import.meta.env.VITE_API_URL || 'https://jrctesthub.live/';
+  return url.endsWith('/') ? url.slice(0, -1) : url;
+};
+
+const API_BASE_URL = getBaseUrl();
 
 export interface RegisterData {
   name: string;

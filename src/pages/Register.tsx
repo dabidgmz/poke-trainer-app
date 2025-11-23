@@ -39,16 +39,127 @@ const Register: React.FC = () => {
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // Estados para validaciones en tiempo real
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [passwordErrors, setPasswordErrors] = useState<{
+    hasUpperCase: boolean;
+    hasLowerCase: boolean;
+    hasNumber: boolean;
+    hasSpecialChar: boolean;
+  }>({
+    hasUpperCase: false,
+    hasLowerCase: false,
+    hasNumber: false,
+    hasSpecialChar: false,
+  });
+  const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
+
+  // Validar nombre en tiempo real
+  const validateName = (name: string) => {
+    if (name.length > 0 && name.length < 3) {
+      setNameError('El nombre debe tener al menos 3 caracteres');
+      return false;
+    }
+    setNameError(null);
+    return true;
+  };
+
+  // Validar email en tiempo real (debe ser Gmail)
+  const validateEmail = (email: string) => {
+    if (email.length === 0) {
+      setEmailError(null);
+      return false;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setEmailError('Por favor ingresa un email válido');
+      return false;
+    }
+    if (!email.toLowerCase().endsWith('@gmail.com')) {
+      setEmailError('El email debe ser de Gmail (@gmail.com)');
+      return false;
+    }
+    setEmailError(null);
+    return true;
+  };
+
+  // Validar teléfono en tiempo real (10 dígitos)
+  const validatePhone = (phone: string) => {
+    if (phone.length === 0) {
+      setPhoneError(null);
+      return true; // Es opcional
+    }
+    // Remover espacios, guiones, paréntesis y otros caracteres
+    const digitsOnly = phone.replace(/\D/g, '');
+    if (digitsOnly.length !== 10) {
+      setPhoneError('El teléfono debe tener exactamente 10 dígitos');
+      return false;
+    }
+    setPhoneError(null);
+    return true;
+  };
+
+  // Validar contraseña en tiempo real
+  const validatePasswordRealTime = (password: string) => {
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    
+    setPasswordErrors({
+      hasUpperCase,
+      hasLowerCase,
+      hasNumber,
+      hasSpecialChar,
+    });
+  };
+
+  // Validar confirmación de contraseña en tiempo real
+  const validateConfirmPassword = (confirm: string, password: string) => {
+    if (confirm.length === 0) {
+      setConfirmPasswordError(null);
+      return false;
+    }
+    if (confirm !== password) {
+      setConfirmPasswordError('Las contraseñas no coinciden');
+      return false;
+    }
+    setConfirmPasswordError(null);
+    return true;
+  };
 
   const handleInputChange = (field: keyof RegisterData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setError(null);
+
+    // Validaciones en tiempo real
+    if (field === 'name') {
+      validateName(value);
+    } else if (field === 'email') {
+      validateEmail(value);
+    } else if (field === 'phone') {
+      validatePhone(value);
+    } else if (field === 'password') {
+      validatePasswordRealTime(value);
+      // También validar confirmación si ya hay texto
+      if (confirmPassword.length > 0) {
+        validateConfirmPassword(confirmPassword, value);
+      }
+    }
+  };
+
+  const handleConfirmPasswordChange = (value: string) => {
+    setConfirmPassword(value);
+    validateConfirmPassword(value, formData.password);
   };
 
   const validateForm = (): boolean => {
-    // Validación de nombre: mínimo 2 caracteres, máximo 255 caracteres
-    if (formData.name.length < 2) {
-      setError('El nombre debe tener al menos 2 caracteres');
+    // Validación de nombre: mínimo 3 caracteres
+    if (!validateName(formData.name) || formData.name.length < 3) {
+      setError('El nombre debe tener al menos 3 caracteres');
       return false;
     }
     if (formData.name.length > 255) {
@@ -56,38 +167,28 @@ const Register: React.FC = () => {
       return false;
     }
 
-    // Validación de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      setError('Por favor ingresa un email válido');
+    // Validación de email (debe ser Gmail)
+    if (!validateEmail(formData.email)) {
+      setError(emailError || 'El email debe ser de Gmail (@gmail.com)');
       return false;
     }
 
-    // Validación de contraseña: mínimo 6 caracteres, máximo 180 caracteres
-    if (formData.password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres');
-      return false;
-    }
-    if (formData.password.length > 180) {
-      setError('La contraseña no puede exceder 180 caracteres');
+    // Validación de teléfono (10 dígitos si se proporciona)
+    if (formData.phone && !validatePhone(formData.phone)) {
+      setError(phoneError || 'El teléfono debe tener exactamente 10 dígitos');
       return false;
     }
 
-    // Validación de teléfono: máximo 20 caracteres (si se proporciona)
-    if (formData.phone && formData.phone.length > 20) {
-      setError('El teléfono no puede exceder 20 caracteres');
-      return false;
-    }
-
-    // Validación de género: máximo 20 caracteres (si se proporciona)
-    if (formData.gender && formData.gender.length > 20) {
-      setError('El género no puede exceder 20 caracteres');
+    // Validación de contraseña
+    const passwordValidation = validatePassword(formData.password);
+    if (!passwordValidation.isValid) {
+      setError('La contraseña debe tener mayúscula, minúscula, número y caracteres especiales');
       return false;
     }
 
     // Validación de confirmación de contraseña
-    if (formData.password !== confirmPassword) {
-      setError('Las contraseñas no coinciden');
+    if (!validateConfirmPassword(confirmPassword, formData.password)) {
+      setError(confirmPasswordError || 'Las contraseñas no coinciden');
       return false;
     }
 
@@ -200,9 +301,14 @@ const Register: React.FC = () => {
                     onIonInput={(e) => handleInputChange('name', e.detail.value!)}
                     placeholder="Tu nombre completo"
                     required
-                    className="auth-input"
+                    className={`auth-input ${nameError ? 'input-error' : ''}`}
                     maxlength={255}
                   />
+                  {nameError && (
+                    <IonText color="danger" style={{ fontSize: '12px', marginTop: '4px', display: 'block', paddingLeft: '16px' }}>
+                      {nameError}
+                    </IonText>
+                  )}
                 </IonItem>
 
                 <IonItem className="auth-input-item" lines="none">
@@ -214,10 +320,20 @@ const Register: React.FC = () => {
                     type="email"
                     value={formData.email}
                     onIonInput={(e) => handleInputChange('email', e.detail.value!)}
-                    placeholder="tu@email.com"
+                    placeholder="tu@gmail.com"
                     required
-                    className="auth-input"
+                    className={`auth-input ${emailError ? 'input-error' : ''}`}
                   />
+                  {emailError && (
+                    <IonText color="danger" style={{ fontSize: '12px', marginTop: '4px', display: 'block', paddingLeft: '16px' }}>
+                      {emailError}
+                    </IonText>
+                  )}
+                  {!emailError && formData.email.length > 0 && formData.email.toLowerCase().endsWith('@gmail.com') && (
+                    <IonText color="success" style={{ fontSize: '12px', marginTop: '4px', display: 'block', paddingLeft: '16px' }}>
+                      ✓ Email válido
+                    </IonText>
+                  )}
                 </IonItem>
 
                 <IonItem className="auth-input-item" lines="none">
@@ -229,10 +345,20 @@ const Register: React.FC = () => {
                     type="tel"
                     value={formData.phone}
                     onIonInput={(e) => handleInputChange('phone', e.detail.value!)}
-                    placeholder="+52 123 456 7890"
-                    className="auth-input"
+                    placeholder="1234567890"
+                    className={`auth-input ${phoneError ? 'input-error' : ''}`}
                     maxlength={20}
                   />
+                  {phoneError && (
+                    <IonText color="danger" style={{ fontSize: '12px', marginTop: '4px', display: 'block', paddingLeft: '16px' }}>
+                      {phoneError}
+                    </IonText>
+                  )}
+                  {!phoneError && formData.phone && formData.phone.length > 0 && formData.phone.replace(/\D/g, '').length === 10 && (
+                    <IonText color="success" style={{ fontSize: '12px', marginTop: '4px', display: 'block', paddingLeft: '16px' }}>
+                      ✓ Teléfono válido (10 dígitos)
+                    </IonText>
+                  )}
                 </IonItem>
 
                 <IonItem className="auth-input-item" lines="none">
@@ -259,16 +385,16 @@ const Register: React.FC = () => {
                     Contraseña
                   </IonLabel>
                   <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
-                  <IonInput
-                    type={showPassword ? 'text' : 'password'}
-                    value={formData.password}
-                    onIonInput={(e) => handleInputChange('password', e.detail.value!)}
+                    <IonInput
+                      type={showPassword ? 'text' : 'password'}
+                      value={formData.password}
+                      onIonInput={(e) => handleInputChange('password', e.detail.value!)}
                     placeholder="Contraseña"
-                    required
-                    className="auth-input"
-                    style={{ flex: '1', paddingRight: '45px' }}
+                      required
+                      className="auth-input"
+                      style={{ flex: '1', paddingRight: '45px' }}
                     maxlength={180}
-                  />
+                    />
                     <IonButton
                       fill="clear"
                       size="small"
@@ -293,6 +419,22 @@ const Register: React.FC = () => {
                       <IonIcon icon={showPassword ? eyeOff : eye} />
                     </IonButton>
                   </div>
+                  {formData.password.length > 0 && (
+                    <div style={{ paddingLeft: '16px', marginTop: '8px', fontSize: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px', color: passwordErrors.hasUpperCase ? '#10b981' : '#ef4444' }}>
+                        {passwordErrors.hasUpperCase ? '✓' : '✗'} Mayúscula
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px', color: passwordErrors.hasLowerCase ? '#10b981' : '#ef4444' }}>
+                        {passwordErrors.hasLowerCase ? '✓' : '✗'} Minúscula
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px', color: passwordErrors.hasNumber ? '#10b981' : '#ef4444' }}>
+                        {passwordErrors.hasNumber ? '✓' : '✗'} Número
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px', color: passwordErrors.hasSpecialChar ? '#10b981' : '#ef4444' }}>
+                        {passwordErrors.hasSpecialChar ? '✓' : '✗'} Carácter especial
+                    </div>
+                  </div>
+                )}
                 </IonItem>
 
 
@@ -305,10 +447,10 @@ const Register: React.FC = () => {
                     <IonInput
                       type={showConfirmPassword ? 'text' : 'password'}
                       value={confirmPassword}
-                      onIonInput={(e) => setConfirmPassword(e.detail.value!)}
+                      onIonInput={(e) => handleConfirmPasswordChange(e.detail.value!)}
                       placeholder="Repite tu contraseña"
                       required
-                      className="auth-input"
+                      className={`auth-input ${confirmPasswordError ? 'input-error' : ''}`}
                       style={{ flex: '1', paddingRight: '45px' }}
                     />
                     <IonButton
@@ -335,6 +477,16 @@ const Register: React.FC = () => {
                       <IonIcon icon={showConfirmPassword ? eyeOff : eye} />
                     </IonButton>
                   </div>
+                  {confirmPasswordError && (
+                    <IonText color="danger" style={{ fontSize: '12px', marginTop: '4px', display: 'block', paddingLeft: '16px' }}>
+                      {confirmPasswordError}
+                    </IonText>
+                  )}
+                  {!confirmPasswordError && confirmPassword.length > 0 && confirmPassword === formData.password && (
+                    <IonText color="success" style={{ fontSize: '12px', marginTop: '4px', display: 'block', paddingLeft: '16px' }}>
+                      ✓ Las contraseñas coinciden
+                    </IonText>
+                  )}
                 </IonItem>
 
 
