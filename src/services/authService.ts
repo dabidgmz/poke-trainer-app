@@ -10,7 +10,7 @@ import offlineCache from './offlineCache';
 // const API_BASE_URL_DEV = 'http://127.0.0.1:3333';
 
 // PRODUCCIÓN
-// const API_BASE_URL_PROD = 'https://jrctesthub.live';
+const API_BASE_URL_PROD = 'https://jrctesthub.live';
 
 // Selecciona el entorno activo (comenta/descomenta según necesites):
 // const API_BASE_URL_MANUAL = API_BASE_URL_DEV;  // ← DESARROLLO (descomentado)
