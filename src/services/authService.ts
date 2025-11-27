@@ -1,10 +1,33 @@
 // Servicio de autenticación para la API de entrenadores
 import offlineCache from './offlineCache';
 
-// Normalizar la URL base (remover barra final si existe, luego agregar una)
+// ============================================
+// CONFIGURACIÓN DE ENTORNO
+// ============================================
+// Para cambiar entre desarrollo y producción, comenta/descomenta las líneas:
+
+// DESARROLLO (localhost)
+const API_BASE_URL_DEV = 'http://127.0.0.1:3333';
+
+// PRODUCCIÓN
+// const API_BASE_URL_PROD = 'https://jrctesthub.live';
+
+// Selecciona el entorno activo (comenta/descomenta según necesites):
+const API_BASE_URL_MANUAL = API_BASE_URL_DEV;  // ← DESARROLLO (descomentado)
+// const API_BASE_URL_MANUAL = API_BASE_URL_PROD;  // ← PRODUCCIÓN (comentado)
+
+// ============================================
+// Alternativamente, puedes usar variables de entorno:
+// Si existe VITE_API_URL, se usará esa URL
+// ============================================
 const getBaseUrl = () => {
-  const url = import.meta.env.VITE_API_URL || 'https://jrctesthub.live/';
-  return url.endsWith('/') ? url.slice(0, -1) : url;
+  // Si hay una variable de entorno, usarla
+  if (import.meta.env.VITE_API_URL) {
+    const url = import.meta.env.VITE_API_URL;
+    return url.endsWith('/') ? url.slice(0, -1) : url;
+  }
+  // Si no, usar la configuración manual de arriba
+  return API_BASE_URL_MANUAL;
 };
 
 const API_BASE_URL = getBaseUrl();
@@ -278,22 +301,31 @@ class AuthService {
     }
   }
 
-  async scanPokemon(pokemonId: number): Promise<{
-    id: number;
-    name: string;
-    rarity: 'common' | 'rare' | 'legendary';
-    timestamp: string;
-    placement?: 'team';
+  async scanPokemon(pokemonId: number, pcBox?: number): Promise<{
+    captureId: number;
+    placement?: 'team' | 'pc';
+    pcBox?: number;
     pokemonInstanceId?: number;
     requiresBoxSelection?: boolean;
-    captureId?: number;
-    pokemonId?: number;
+    pokemon: {
+      id: number;
+      pokeapiId: number;
+      name: string;
+      spriteUrl: string | null;
+      types: string[];
+      rarity: 'common' | 'rare' | 'legendary';
+    };
   }> {
     try {
+      const body: any = { pokemonId };
+      if (pcBox !== undefined) {
+        body.pcBox = pcBox;
+      }
+
       const response = await fetch(`${API_BASE_URL}/captures/scan`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
-        body: JSON.stringify({ pokemonId }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
@@ -317,17 +349,21 @@ class AuthService {
     }
   }
 
-  async completeCapture(captureId: number, pcBox: number): Promise<{
-    id: number;
-    name: string;
-    rarity: 'common' | 'rare' | 'legendary';
-    timestamp: string;
+  async confirmCapture(captureId: number, pcBox: number): Promise<{
+    pokemonInstanceId: number;
     placement: 'pc';
     pcBox: number;
-    pokemonInstanceId: number;
+    pokemon: {
+      id: number;
+      pokeapiId: number;
+      name: string;
+      spriteUrl: string | null;
+      types: string[];
+      rarity: 'common' | 'rare' | 'legendary';
+    };
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/captures/complete`, {
+      const response = await fetch(`${API_BASE_URL}/captures/confirm`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
         body: JSON.stringify({ captureId, pcBox }),
@@ -341,11 +377,11 @@ class AuthService {
         if (response.status === 403) {
           throw new Error('Este endpoint es solo para entrenadores');
         }
-        const error = await response.json().catch(() => ({ message: 'Error al completar la captura' }));
-        throw new Error(error.message || 'Error al completar la captura');
+        const error = await response.json().catch(() => ({ message: 'Error al confirmar la captura' }));
+        throw new Error(error.message || 'Error al confirmar la captura');
       }
 
-    return response.json();
+      return response.json();
     } catch (error: any) {
       if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
         throw new Error(`No se pudo conectar con la API. Verifica que el servidor esté corriendo en ${API_BASE_URL}`);

@@ -420,6 +420,7 @@ const Tab4: React.FC = () => {
     console.log('QR Code detectado:', qrCode);
     setIsLoading(true);
     setError(null);
+    setCapturedPokemonInfo(null);
     
     try {
       // El QR code puede venir como JSON object o como número
@@ -450,35 +451,45 @@ const Tab4: React.FC = () => {
         throw new Error('Código QR inválido. Debe contener un ID de Pokémon válido.');
       }
       
-      // Obtener información del Pokémon desde la PokeAPI
-      const pokemonInfo = await fetchPokemonFromPokeAPI(pokemonId);
-      setCapturedPokemonInfo(pokemonInfo);
-      
       // Llamar a la API para escanear el Pokémon
       const result = await authService.scanPokemon(pokemonId);
       
       console.log('Resultado del scan:', result);
-      console.log('requiresBoxSelection:', result.requiresBoxSelection);
-      console.log('captureId:', result.captureId);
-      console.log('pokemonId:', result.pokemonId);
-      console.log('placement:', result.placement);
+      
+      // Validar que la respuesta tenga la estructura esperada
+      if (!result.pokemon) {
+        throw new Error('Respuesta inválida del servidor: falta información del Pokémon');
+      }
+      
+      // Validar propiedades del Pokémon antes de usar
+      const pokemonName = result.pokemon?.name || 'Pokémon desconocido';
+      const spriteUrl = result.pokemon?.spriteUrl || null;
+      const types = result.pokemon?.types || [];
+      const rarity = result.pokemon?.rarity || 'common';
+      
+      // Guardar información del Pokémon capturado
+      setCapturedPokemonInfo({
+        id: result.pokemon.id,
+        name: pokemonName,
+        spriteUrl: spriteUrl || '',
+        types: types
+      });
       
       // Si requiere selección de caja (equipo lleno)
-      // Verificar si tiene captureId y pokemonId pero no placement 'team', o si requiresBoxSelection es true
-      const needsBoxSelection = result.requiresBoxSelection || 
-        (result.captureId && result.pokemonId && result.placement !== 'team');
-      
-      if (needsBoxSelection) {
+      if (result.requiresBoxSelection) {
         console.log('Equipo lleno, mostrando modal de selección de caja');
-        if (!result.captureId || !result.pokemonId) {
-          throw new Error('Error: La API no devolvió captureId o pokemonId para la selección de caja');
+        
+        if (!result.captureId) {
+          throw new Error('Error: La API no devolvió captureId para la selección de caja');
         }
+        
         setPendingCapture({
           captureId: result.captureId,
-          pokemonId: result.pokemonId,
-          name: pokemonInfo.name,
-          rarity: result.rarity
+          pokemonId: result.pokemon.pokeapiId,
+          name: pokemonName,
+          rarity: rarity
         });
+        
         // Cerrar el scanner primero
         setShowQRScanner(false);
         // Esperar un momento para que el scanner se cierre
@@ -489,12 +500,19 @@ const Tab4: React.FC = () => {
         return;
       }
       
-      // Si se agregó directamente al equipo
-      if (result.placement === 'team') {
-        const typesText = pokemonInfo.types.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(' / ');
+      // Si se agregó directamente al equipo o PC
+      if (result.placement === 'team' || result.placement === 'pc') {
+        const typesText = types.length > 0 
+          ? types.map(t => (t || '').charAt(0).toUpperCase() + (t || '').slice(1)).join(' / ')
+          : '';
+        
+        const message = result.placement === 'team'
+          ? `¡${pokemonName} agregado a tu equipo!${typesText ? `\nTipo: ${typesText}` : ''}`
+          : `¡${pokemonName} guardado en Caja ${result.pcBox}!${typesText ? `\nTipo: ${typesText}` : ''}`;
+        
         const alert = await alertController.create({
           header: '¡Pokémon Capturado!',
-          message: `Has capturado a ${pokemonInfo.name} (${result.rarity})\nTipo: ${typesText}\nSe agregó a tu equipo.`,
+          message: message,
           buttons: ['OK']
         });
         await alert.present();
@@ -529,19 +547,27 @@ const Tab4: React.FC = () => {
     setError(null);
     
     try {
-      const result = await authService.completeCapture(pendingCapture.captureId, boxNumber);
+      const result = await authService.confirmCapture(pendingCapture.captureId, boxNumber);
       
-      // Obtener información del Pokémon desde la PokeAPI si no está disponible
-      let pokemonInfo = capturedPokemonInfo;
-      if (!pokemonInfo && pendingCapture.pokemonId) {
-        pokemonInfo = await fetchPokemonFromPokeAPI(pendingCapture.pokemonId);
+      // Validar que la respuesta tenga la estructura esperada
+      if (!result.pokemon) {
+        throw new Error('Respuesta inválida del servidor: falta información del Pokémon');
       }
       
-      const pokemonName = pokemonInfo?.name || result.name || pendingCapture.name || 'Pokémon';
-      const typesText = pokemonInfo?.types.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(' / ') || '';
+      // Validar propiedades del Pokémon antes de usar
+      const pokemonName = result.pokemon?.name || pendingCapture.name || 'Pokémon';
+      const spriteUrl = result.pokemon?.spriteUrl || null;
+      const types = result.pokemon?.types || [];
+      const rarity = result.pokemon?.rarity || pendingCapture.rarity || 'common';
+      
+      // Construir mensaje de tipos
+      const typesText = types.length > 0
+        ? types.map(t => (t || '').charAt(0).toUpperCase() + (t || '').slice(1)).join(' / ')
+        : '';
+      
       const alert = await alertController.create({
         header: '¡Pokémon Capturado!',
-        message: `Has capturado a ${pokemonName} (${result.rarity || pendingCapture.rarity})${typesText ? `\nTipo: ${typesText}` : ''}\nSe guardó en la caja ${result.pcBox} del PC.`,
+        message: `Has capturado a ${pokemonName} (${rarity.charAt(0).toUpperCase() + rarity.slice(1)})${typesText ? `\nTipo: ${typesText}` : ''}\nSe guardó en la caja ${result.pcBox} del PC.`,
         buttons: ['OK']
       });
       await alert.present();
@@ -552,15 +578,15 @@ const Tab4: React.FC = () => {
       setShowQRScanner(false);
       
     } catch (err: any) {
-      console.error('Error completando captura:', err);
-      setError(err.message || 'Error al completar la captura');
+      console.error('Error confirmando captura:', err);
+      setError(err.message || 'Error al confirmar la captura');
       
       if (err.message === 'No autenticado') {
         history.push('/login');
-    } else {
+      } else {
         const alert = await alertController.create({
           header: 'Error',
-          message: err.message || 'Error al completar la captura',
+          message: err.message || 'Error al confirmar la captura',
           buttons: ['OK']
         });
         await alert.present();
@@ -887,24 +913,36 @@ const Tab4: React.FC = () => {
                 {capturedPokemonInfo && (
                   <div style={{ marginBottom: '20px' }}>
                     <img 
-                      src={capturedPokemonInfo.spriteUrl} 
-                      alt={capturedPokemonInfo.name}
+                      src={capturedPokemonInfo.spriteUrl || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${capturedPokemonInfo.id}.png`} 
+                      alt={capturedPokemonInfo.name || 'Pokémon'}
                       style={{ width: '150px', height: '150px', objectFit: 'contain' }}
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${capturedPokemonInfo.id}.png`;
+                        (e.target as HTMLImageElement).src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${capturedPokemonInfo.id || 0}.png`;
                       }}
                     />
                     <IonText>
-                      <h2>¡{capturedPokemonInfo.name} capturado!</h2>
+                      <h2>¡{capturedPokemonInfo.name || pendingCapture.name || 'Pokémon'} capturado!</h2>
                       <p style={{ marginTop: '10px' }}>
                         <IonChip color="primary" style={{ marginRight: '5px' }}>
-                          {pendingCapture.rarity.toUpperCase()}
+                          {(pendingCapture.rarity || 'common').toUpperCase()}
                         </IonChip>
-                        {capturedPokemonInfo.types.map((type, idx) => (
+                        {capturedPokemonInfo.types && capturedPokemonInfo.types.length > 0 && capturedPokemonInfo.types.map((type, idx) => (
                           <IonChip key={idx} color="secondary" style={{ marginRight: '5px' }}>
-                            {type.charAt(0).toUpperCase() + type.slice(1)}
+                            {(type || '').charAt(0).toUpperCase() + (type || '').slice(1)}
                           </IonChip>
                         ))}
+                      </p>
+                    </IonText>
+                  </div>
+                )}
+                {!capturedPokemonInfo && (
+                  <div style={{ marginBottom: '20px' }}>
+                    <IonText>
+                      <h2>¡{pendingCapture.name || 'Pokémon'} capturado!</h2>
+                      <p style={{ marginTop: '10px' }}>
+                        <IonChip color="primary" style={{ marginRight: '5px' }}>
+                          {(pendingCapture.rarity || 'common').toUpperCase()}
+                        </IonChip>
                       </p>
                     </IonText>
                   </div>
