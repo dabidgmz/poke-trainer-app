@@ -7,14 +7,14 @@ import offlineCache from './offlineCache';
 // Para cambiar entre desarrollo y producción, comenta/descomenta las líneas:
 
 // DESARROLLO (localhost)
-const API_BASE_URL_DEV = 'http://127.0.0.1:3333';
+// const API_BASE_URL_DEV = 'http://127.0.0.1:3333';
 
 // PRODUCCIÓN
 // const API_BASE_URL_PROD = 'https://jrctesthub.live';
 
 // Selecciona el entorno activo (comenta/descomenta según necesites):
-const API_BASE_URL_MANUAL = API_BASE_URL_DEV;  // ← DESARROLLO (descomentado)
-// const API_BASE_URL_MANUAL = API_BASE_URL_PROD;  // ← PRODUCCIÓN (comentado)
+// const API_BASE_URL_MANUAL = API_BASE_URL_DEV;  // ← DESARROLLO (descomentado)
+const API_BASE_URL_MANUAL = API_BASE_URL_PROD;  // ← PRODUCCIÓN (comentado)
 
 // ============================================
 // Alternativamente, puedes usar variables de entorno:
