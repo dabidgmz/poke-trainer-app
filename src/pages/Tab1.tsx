@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   IonContent,
   IonHeader,
@@ -27,9 +27,11 @@ import {
   IonSpinner,
   IonGrid,
   IonRow,
-  IonCol
+  IonCol,
+  useIonViewWillLeave,
+  useIonViewDidEnter
 } from '@ionic/react';
-import { search, filter, refresh, searchCircle, close, flame, shield, heart, speedometer, star } from 'ionicons/icons';
+import { search, filter, refresh, searchCircle, close, flame, shield, heart, speedometer, star, swapVertical, layers, trophy } from 'ionicons/icons';
 import ProfileButton from '../components/ProfileButton';
 import OfflineMessage from '../components/OfflineMessage';
 import offlineCache from '../services/offlineCache';
@@ -86,6 +88,9 @@ const Pokedex: React.FC = () => {
   const [items, setItems] = useState<any[]>([]);
   const [searchText, setSearchText] = useState('');
   const [type, setType] = useState('');
+  const [generation, setGeneration] = useState('');
+  const [sortBy, setSortBy] = useState('id-asc');
+  const [rarity, setRarity] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPokemon, setSelectedPokemon] = useState<PokemonDetails | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -186,6 +191,54 @@ const Pokedex: React.FC = () => {
     }
   };
 
+  // Función para limpiar recursos
+  const cleanupAll = useCallback(() => {
+    // Cerrar modal si está abierto
+    if (showModal) {
+      setShowModal(false);
+      setSelectedPokemon(null);
+    }
+    // Limpiar estados de carga
+    setIsLoading(false);
+    setLoadingDetails(false);
+  }, [showModal]);
+
+  // Limpiar cuando se sale de la vista (navegación entre tabs)
+  useIonViewWillLeave(() => {
+    cleanupAll();
+  });
+
+  // Reinicializar cuando se entra a la vista
+  useIonViewDidEnter(() => {
+    // Asegurar que el modal esté cerrado
+    if (showModal) {
+      setShowModal(false);
+      setSelectedPokemon(null);
+    }
+  });
+
+  // Limpiar cuando la página se oculta
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        cleanupAll();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [cleanupAll]);
+
+  // Limpiar al desmontar el componente
+  useEffect(() => {
+    return () => {
+      cleanupAll();
+    };
+  }, [cleanupAll]);
+
   useEffect(() => {
     generateItems();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -205,12 +258,54 @@ const Pokedex: React.FC = () => {
     };
   }, []);
 
-  // Filtro por búsqueda y tipo
-  const filteredItems = items.filter(
-    (item) =>
-      item.name.toLowerCase().includes(searchText.toLowerCase()) &&
-      (type === '' || item.type === type || item.types?.includes(type))
-  );
+  // Función para obtener la generación de un Pokémon
+  const getGeneration = (id: number): number => {
+    if (id <= 151) return 1;
+    if (id <= 251) return 2;
+    if (id <= 386) return 3;
+    if (id <= 493) return 4;
+    if (id <= 649) return 5;
+    if (id <= 721) return 6;
+    if (id <= 809) return 7;
+    return 8;
+  };
+
+  // Función para determinar rareza basada en tipos
+  const getRarity = (types: string[]): string => {
+    const legendaryTypes = ['dragon', 'psychic', 'ghost'];
+    const rareTypes = ['electric', 'ice', 'steel', 'fairy', 'dark'];
+    
+    const hasLegendary = types.some(t => legendaryTypes.includes(t));
+    const hasRare = types.some(t => rareTypes.includes(t));
+    
+    if (hasLegendary) return 'legendary';
+    if (hasRare) return 'rare';
+    return 'common';
+  };
+
+  // Filtro por búsqueda, tipo, generación y rareza
+  const filteredItems = items
+    .filter((item) => {
+      const matchesSearch = item.name.toLowerCase().includes(searchText.toLowerCase());
+      const matchesType = type === '' || item.type === type || item.types?.includes(type);
+      const matchesGeneration = generation === '' || getGeneration(item.id).toString() === generation;
+      const matchesRarity = rarity === '' || getRarity(item.types || []) === rarity;
+      
+      return matchesSearch && matchesType && matchesGeneration && matchesRarity;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'name-asc':
+          return a.name.localeCompare(b.name);
+        case 'name-desc':
+          return b.name.localeCompare(a.name);
+        case 'id-desc':
+          return b.id - a.id;
+        case 'id-asc':
+        default:
+          return a.id - b.id;
+      }
+    });
 
   return (
     <IonPage className="pokedex-page">
@@ -276,73 +371,240 @@ const Pokedex: React.FC = () => {
                 searchIcon={searchCircle}
               />
             </div>
-            <div className="filter-section">
+            <div className="filter-section" style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '12px',
+              marginTop: '16px',
+              padding: '0 8px'
+            }}>
+              {/* Filtro por Tipo */}
               <div style={{ 
                 backgroundColor: 'white',
                 padding: '12px 16px',
                 borderRadius: '12px',
                 border: '2px solid #e2e8f0',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-                maxWidth: '300px',
-                margin: '0 auto'
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
               }}>
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
-                  marginBottom: '4px'
+                  marginBottom: '8px'
                 }}>
-                  <IonIcon icon={filter} style={{ color: '#64748b', fontSize: '18px' }} />
+                  <IonIcon icon={flame} style={{ color: '#ef4444', fontSize: '18px' }} />
                   <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
-                    Filtrar por tipo:
+                    Tipo:
                   </span>
                 </div>
                 <IonSelect
                   value={type}
-                  onIonChange={e => {
-                    console.log('Tipo seleccionado:', e.detail.value);
-                    setType(e.detail.value);
-                  }}
-                  placeholder="Selecciona un tipo"
+                  onIonChange={e => setType(e.detail.value)}
+                  placeholder="Todos"
                   interface="action-sheet"
-                  aria-label="Tipo de Pokémon"
-                  className="type-filter-select"
                   style={{
                     '--background': 'transparent',
-                    '--color': '#1e293b',
-                    '--placeholder-color': '#94a3b8',
-                    '--padding-start': '0',
-                    '--padding-end': '0',
-                    width: '100%',
-                    fontSize: '16px',
-                    fontWeight: '700',
-                    color: type ? '#10b981' : '#1e293b'
+                    '--color': type ? '#10b981' : '#1e293b',
+                    fontSize: '14px',
+                    fontWeight: '600'
                   }}
                 >
                   {pokemonTypes.map((t) => (
                     <IonSelectOption key={t.value} value={t.value}>{t.label}</IonSelectOption>
                   ))}
                 </IonSelect>
-                {type && (
-                  <div style={{ marginTop: '8px' }}>
-                    <IonChip 
-                      style={{
-                        backgroundColor: getTypeColor(type),
-                        color: 'white',
-                        fontWeight: 'bold',
-                        margin: 0
-                      }}
-                      onClick={() => setType('')}
-                    >
-                      <IonLabel>
-                        {pokemonTypes.find(t => t.value === type)?.label || 'Filtro'}
-                      </IonLabel>
-                      <IonIcon icon={close} />
-                    </IonChip>
-                  </div>
-                )}
+              </div>
+
+              {/* Filtro por Generación */}
+              <div style={{ 
+                backgroundColor: 'white',
+                padding: '12px 16px',
+                borderRadius: '12px',
+                border: '2px solid #e2e8f0',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  marginBottom: '8px'
+                }}>
+                  <IonIcon icon={layers} style={{ color: '#3b82f6', fontSize: '18px' }} />
+                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
+                    Generación:
+                  </span>
+                </div>
+                <IonSelect
+                  value={generation}
+                  onIonChange={e => setGeneration(e.detail.value)}
+                  placeholder="Todas"
+                  interface="action-sheet"
+                  style={{
+                    '--background': 'transparent',
+                    '--color': generation ? '#3b82f6' : '#1e293b',
+                    fontSize: '14px',
+                    fontWeight: '600'
+                  }}
+                >
+                  <IonSelectOption value="">Todas</IonSelectOption>
+                  <IonSelectOption value="1">Gen 1 (Kanto)</IonSelectOption>
+                  <IonSelectOption value="2">Gen 2 (Johto)</IonSelectOption>
+                  <IonSelectOption value="3">Gen 3 (Hoenn)</IonSelectOption>
+                  <IonSelectOption value="4">Gen 4 (Sinnoh)</IonSelectOption>
+                  <IonSelectOption value="5">Gen 5 (Unova)</IonSelectOption>
+                  <IonSelectOption value="6">Gen 6 (Kalos)</IonSelectOption>
+                  <IonSelectOption value="7">Gen 7 (Alola)</IonSelectOption>
+                  <IonSelectOption value="8">Gen 8 (Galar)</IonSelectOption>
+                </IonSelect>
+              </div>
+
+              {/* Filtro por Rareza */}
+              <div style={{ 
+                backgroundColor: 'white',
+                padding: '12px 16px',
+                borderRadius: '12px',
+                border: '2px solid #e2e8f0',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  marginBottom: '8px'
+                }}>
+                  <IonIcon icon={trophy} style={{ color: '#f59e0b', fontSize: '18px' }} />
+                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
+                    Rareza:
+                  </span>
+                </div>
+                <IonSelect
+                  value={rarity}
+                  onIonChange={e => setRarity(e.detail.value)}
+                  placeholder="Todas"
+                  interface="action-sheet"
+                  style={{
+                    '--background': 'transparent',
+                    '--color': rarity ? '#f59e0b' : '#1e293b',
+                    fontSize: '14px',
+                    fontWeight: '600'
+                  }}
+                >
+                  <IonSelectOption value="">Todas</IonSelectOption>
+                  <IonSelectOption value="common">Común</IonSelectOption>
+                  <IonSelectOption value="rare">Raro</IonSelectOption>
+                  <IonSelectOption value="legendary">Legendario</IonSelectOption>
+                </IonSelect>
+              </div>
+
+              {/* Ordenar */}
+              <div style={{ 
+                backgroundColor: 'white',
+                padding: '12px 16px',
+                borderRadius: '12px',
+                border: '2px solid #e2e8f0',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  marginBottom: '8px'
+                }}>
+                  <IonIcon icon={swapVertical} style={{ color: '#8b5cf6', fontSize: '18px' }} />
+                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
+                    Ordenar:
+                  </span>
+                </div>
+                <IonSelect
+                  value={sortBy}
+                  onIonChange={e => setSortBy(e.detail.value)}
+                  interface="action-sheet"
+                  style={{
+                    '--background': 'transparent',
+                    '--color': '#8b5cf6',
+                    fontSize: '14px',
+                    fontWeight: '600'
+                  }}
+                >
+                  <IonSelectOption value="id-asc">ID ↑</IonSelectOption>
+                  <IonSelectOption value="id-desc">ID ↓</IonSelectOption>
+                  <IonSelectOption value="name-asc">A-Z</IonSelectOption>
+                  <IonSelectOption value="name-desc">Z-A</IonSelectOption>
+                </IonSelect>
               </div>
             </div>
+
+            {/* Chips de filtros activos */}
+            {(type || generation || rarity) && (
+              <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '8px',
+                marginTop: '12px',
+                padding: '0 8px',
+                justifyContent: 'center'
+              }}>
+                {type && (
+                  <IonChip 
+                    style={{
+                      backgroundColor: getTypeColor(type),
+                      color: 'white',
+                      fontWeight: 'bold'
+                    }}
+                    onClick={() => setType('')}
+                  >
+                    <IonLabel>
+                      Tipo: {pokemonTypes.find(t => t.value === type)?.label}
+                    </IonLabel>
+                    <IonIcon icon={close} />
+                  </IonChip>
+                )}
+                {generation && (
+                  <IonChip 
+                    style={{
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      fontWeight: 'bold'
+                    }}
+                    onClick={() => setGeneration('')}
+                  >
+                    <IonLabel>
+                      Gen {generation}
+                    </IonLabel>
+                    <IonIcon icon={close} />
+                  </IonChip>
+                )}
+                {rarity && (
+                  <IonChip 
+                    style={{
+                      backgroundColor: rarity === 'legendary' ? '#f59e0b' : rarity === 'rare' ? '#8b5cf6' : '#10b981',
+                      color: 'white',
+                      fontWeight: 'bold'
+                    }}
+                    onClick={() => setRarity('')}
+                  >
+                    <IonLabel>
+                      {rarity === 'legendary' ? 'Legendario' : rarity === 'rare' ? 'Raro' : 'Común'}
+                    </IonLabel>
+                    <IonIcon icon={close} />
+                  </IonChip>
+                )}
+                <IonButton
+                  size="small"
+                  fill="clear"
+                  onClick={() => {
+                    setType('');
+                    setGeneration('');
+                    setRarity('');
+                    setSortBy('id-asc');
+                  }}
+                  style={{ '--color': '#64748b', fontSize: '12px' }}
+                >
+                  <IonIcon icon={refresh} slot="start" />
+                  Limpiar filtros
+                </IonButton>
+              </div>
+            )}
           </div>
 
           {/* Pantalla principal de la Pokédex */}
@@ -375,7 +637,7 @@ const Pokedex: React.FC = () => {
                           <div className="grid-line"></div>
                         </div>
                         {/* Contador de resultados */}
-                        {(searchText || type) && (
+                        {(searchText || type || generation || rarity) && (
                           <div style={{
                             textAlign: 'center',
                             padding: '8px',
@@ -385,7 +647,7 @@ const Pokedex: React.FC = () => {
                             border: '1px solid rgba(16, 185, 129, 0.3)'
                           }}>
                             <span style={{ color: '#10b981', fontSize: '12px', fontWeight: 'bold' }}>
-                              {filteredItems.length} Pokémon encontrados
+                              {filteredItems.length} Pokémon encontrado{filteredItems.length !== 1 ? 's' : ''}
                             </span>
                           </div>
                         )}
@@ -454,7 +716,11 @@ const Pokedex: React.FC = () => {
         {/* Modal de detalles del Pokémon */}
         <IonModal 
           isOpen={showModal} 
-          onDidDismiss={() => setShowModal(false)}
+          onDidDismiss={() => {
+            setShowModal(false);
+            setSelectedPokemon(null);
+            setLoadingDetails(false);
+          }}
           className="pokemon-details-modal"
         >
           <IonHeader>

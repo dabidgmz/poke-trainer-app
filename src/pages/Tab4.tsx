@@ -21,7 +21,9 @@ import {
   IonLabel,
   IonModal,
   IonText,
-  IonSpinner
+  IonSpinner,
+  useIonViewWillLeave,
+  useIonViewDidEnter
 } from '@ionic/react';
 import { 
   camera, 
@@ -107,7 +109,6 @@ const Tab4: React.FC = () => {
         types: data.types.map((t: any) => t.type.name)
       };
     } catch (error) {
-      console.error('Error obteniendo datos de PokeAPI:', error);
       // Retornar datos por defecto si falla
       return {
         id: pokeapiId,
@@ -191,14 +192,13 @@ const Tab4: React.FC = () => {
   useEffect(() => {
     const requestCameraPermissions = async () => {
       try {
-        console.log('Solicitando permisos de cámara automáticamente al cargar la app...');
+
         setIsRequestingPermissions(true);
         
         const result = await CameraUtils.requestCameraPermissions();
         
         if (result.granted) {
           setCameraPermission('granted');
-          console.log('Permisos de cámara concedidos');
           
           // Abrir QR Scanner automáticamente después de un breve delay
           setTimeout(() => {
@@ -207,11 +207,9 @@ const Tab4: React.FC = () => {
         } else {
           setCameraPermission('denied');
           setCameraError(result.error || 'Error al solicitar permisos de cámara');
-          console.log('Error solicitando permisos:', result.error);
         }
         
       } catch (error: any) {
-        console.log('Error general al solicitar permisos de cámara:', error);
         setCameraPermission('unknown');
         setCameraError('Error inesperado al solicitar permisos de cámara');
       } finally {
@@ -248,12 +246,10 @@ const Tab4: React.FC = () => {
             throw new Error('No se pudo obtener el stream de video');
           }
         } catch (streamError: any) {
-          console.error('Error obteniendo stream de video:', streamError);
           throw streamError;
         }
       }
     } catch (error: any) {
-      console.error('Error activating camera:', error);
       
       let errorMessage = 'No se pudo activar la cámara.';
       
@@ -305,7 +301,6 @@ const Tab4: React.FC = () => {
         await activateCamera();
       }
     } catch (error: any) {
-      console.error('Error accessing camera:', error);
       
       let errorMessage = 'No se pudo acceder a la cámara.';
       
@@ -328,17 +323,34 @@ const Tab4: React.FC = () => {
 
   const stopCamera = () => {
     try {
+      
+      // Detener todos los tracks del stream
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => {
+          track.stop();
+        });
+      }
+      
       // Usar las utilidades para limpiar el stream
       CameraUtils.cleanupVideoStream(streamRef.current);
       streamRef.current = null;
       
+      // Limpiar referencias de video
       if (videoRef.current) {
         videoRef.current.srcObject = null;
+        videoRef.current.pause();
+      }
+      
+      // Limpiar canvas si existe
+      if (canvasRef.current) {
+        const context = canvasRef.current.getContext('2d');
+        if (context) {
+          context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+        }
       }
       
       setIsScanning(false);
     } catch (error) {
-      console.error('Error deteniendo cámara:', error);
       setIsScanning(false);
     }
   };
@@ -381,7 +393,6 @@ const Tab4: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error('Error capturing photo:', error);
       setCameraError('Error al capturar la foto. Inténtalo de nuevo.');
     }
   };
@@ -417,7 +428,6 @@ const Tab4: React.FC = () => {
   };
 
   const handleQRDetected = async (qrCode: string) => {
-    console.log('QR Code detectado:', qrCode);
     setIsLoading(true);
     setError(null);
     setCapturedPokemonInfo(null);
@@ -454,7 +464,6 @@ const Tab4: React.FC = () => {
       // Llamar a la API para escanear el Pokémon
       const result = await authService.scanPokemon(pokemonId);
       
-      console.log('Resultado del scan:', result);
       
       // Validar que la respuesta tenga la estructura esperada
       if (!result.pokemon) {
@@ -477,7 +486,6 @@ const Tab4: React.FC = () => {
       
       // Si requiere selección de caja (equipo lleno)
       if (result.requiresBoxSelection) {
-        console.log('Equipo lleno, mostrando modal de selección de caja');
         
         if (!result.captureId) {
           throw new Error('Error: La API no devolvió captureId para la selección de caja');
@@ -522,7 +530,6 @@ const Tab4: React.FC = () => {
       }
       
     } catch (err: any) {
-      console.error('Error capturando Pokémon:', err);
       setError(err.message || 'Error al capturar el Pokémon');
       
       if (err.message === 'No autenticado') {
@@ -578,7 +585,6 @@ const Tab4: React.FC = () => {
       setShowQRScanner(false);
       
     } catch (err: any) {
-      console.error('Error confirmando captura:', err);
       setError(err.message || 'Error al confirmar la captura');
       
       if (err.message === 'No autenticado') {
@@ -603,7 +609,12 @@ const Tab4: React.FC = () => {
   };
 
   const handleCloseQRScanner = () => {
+    stopCamera();
+    setIsScanning(false);
     setShowQRScanner(false);
+    setError(null);
+    // Limpiar información de captura pendiente si existe
+    setCapturedPokemonInfo(null);
   };
 
   const getTypeColor = (type: string) => {
@@ -630,9 +641,44 @@ const Tab4: React.FC = () => {
     return colors[type] || '#6b7280';
   };
 
+  // Limpiar cámara cuando el componente se desmonta
   useEffect(() => {
     return () => {
       stopCamera();
+      setShowQRScanner(false);
+    };
+  }, []);
+
+  // Limpiar cuando se sale de la vista (navegación entre tabs)
+  useIonViewWillLeave(() => {
+    stopCamera();
+    setShowQRScanner(false);
+    setIsScanning(false);
+  });
+
+  // Limpiar cuando se cierra el QRScanner
+  useEffect(() => {
+    if (!showQRScanner) {
+      // Si se cierra el scanner, asegurar que la cámara esté detenida
+      stopCamera();
+      setIsScanning(false);
+    }
+  }, [showQRScanner]);
+
+  // Detectar cuando la página se oculta (navegación a otro tab)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopCamera();
+        setShowQRScanner(false);
+        setIsScanning(false);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
@@ -897,7 +943,7 @@ const Tab4: React.FC = () => {
           isOpen={showBoxSelection} 
           onDidDismiss={cancelBoxSelection}
           backdropDismiss={false}
-          cssClass="box-selection-modal"
+          className="box-selection-modal"
         >
           <IonHeader>
             <IonToolbar>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   IonContent, 
   IonHeader, 
@@ -12,7 +12,9 @@ import {
   IonChip,
   IonIcon,
   IonSpinner,
-  IonText
+  IonText,
+  useIonViewWillLeave,
+  useIonViewDidEnter
 } from '@ionic/react';
 import { 
   ReorderEndCustomEvent 
@@ -161,8 +163,46 @@ const Tab2: React.FC = () => {
     loadTeam();
   }, [history]);
 
+  // Función para limpiar recursos
+  const cleanupAll = useCallback(() => {
+    // Limpiar estados de carga
+    setIsLoading(false);
+    setError(null);
+  }, []);
+
+  // Limpiar cuando se sale de la vista (navegación entre tabs)
+  useIonViewWillLeave(() => {
+    cleanupAll();
+  });
+
+  // Reinicializar cuando se entra a la vista
+  useIonViewDidEnter(() => {
+
+  });
+
+  // Limpiar cuando la página se oculta
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        cleanupAll();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [cleanupAll]);
+
+  // Limpiar al desmontar el componente
+  useEffect(() => {
+    return () => {
+      cleanupAll();
+    };
+  }, [cleanupAll]);
+
   function handleReorderEnd(event: ReorderEndCustomEvent) {
-    console.log('Pokémon movido de posición', event.detail.from, 'a', event.detail.to);
     
     const reorderedTeam = [...pokemonTeam];
     const [movedPokemon] = reorderedTeam.splice(event.detail.from, 1);

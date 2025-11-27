@@ -100,12 +100,12 @@ const Login: React.FC = () => {
         await deferredPrompt.prompt();
         // Esperar a que el usuario responda
         const { outcome } = await deferredPrompt.userChoice;
-        console.log(`Usuario ${outcome === 'accepted' ? 'aceptó' : 'rechazó'} la instalación`);
+
         // Limpiar el prompt
         setDeferredPrompt(null);
         setIsInstallable(false);
       } catch (error) {
-        console.error('Error al mostrar el prompt de instalación:', error);
+
       }
       return;
     }

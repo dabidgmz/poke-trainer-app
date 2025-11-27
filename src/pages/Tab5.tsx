@@ -218,7 +218,6 @@ const Tab5: React.FC = () => {
       await authService.logout();
       history.push('/login');
     } catch (err: any) {
-      console.error('Error al cerrar sesión:', err);
       // Aún así redirigir a login
       history.push('/login');
     }

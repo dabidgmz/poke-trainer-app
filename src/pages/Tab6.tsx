@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonContent,
   IonButton, IonCard, IonCardContent, IonIcon, IonSpinner,
   IonAlert, IonToggle, IonItem, IonLabel, IonText,
-  IonGrid, IonRow, IonCol, IonChip, IonBadge
+  IonGrid, IonRow, IonCol, IonChip, IonBadge,
+  useIonViewWillLeave,
+  useIonViewDidEnter
 } from '@ionic/react';
 import { alertController } from '@ionic/core';
 import { Capacitor } from '@capacitor/core';
@@ -28,6 +30,7 @@ const useFlashlight = () => {
   const [toggled, setToggled] = useState(false);
   const [disabled, setDisabled] = useState(false);
   const [track, setTrack] = useState<MediaStreamTrack | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const toggleAsync = async () => {
     if (toggled) {
@@ -62,6 +65,7 @@ const useFlashlight = () => {
         },
       });
 
+      streamRef.current = stream;
       const videoTrack = stream.getVideoTracks()[0];
       setTrack(videoTrack);
 
@@ -73,7 +77,6 @@ const useFlashlight = () => {
       setDisabled(false);
       setToggled(true);
     } catch (err: any) {
-      console.error('Error activando linterna:', err);
       setDisabled(false);
       throw err;
     }
@@ -82,12 +85,45 @@ const useFlashlight = () => {
   const stopAsync = async () => {
     if (track) {
       setDisabled(true);
-      track.stop();
+      try {
+        track.stop();
+      } catch (error) {
+        console.error('[useFlashlight] Error deteniendo track:', error);
+      }
       setTrack(null);
+      
+      // Limpiar el stream completo
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => {
+          if (t !== track) {
+            t.stop();
+          }
+        });
+        streamRef.current = null;
+      }
+      
       setDisabled(false);
       setToggled(false);
     }
   };
+
+  // Limpiar al desmontar el hook
+  useEffect(() => {
+    return () => {
+      if (track) {
+        try {
+          track.stop();
+        } catch (error) {
+          console.error('[useFlashlight] Error limpiando track:', error);
+        }
+        setTrack(null);
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+      }
+    };
+  }, [track]);
 
   return { toggleAsync, toggled, disabled };
 };
@@ -124,22 +160,14 @@ const Tab6: React.FC = () => {
     const isCapacitor = window.Capacitor && window.Capacitor.isNativePlatform();
     const hasNativePlugins = window.Capacitor && (window.Capacitor as any).Plugins;
     
-    console.log('[Torch] Detección de plataforma:', {
-      isNative,
-      platform,
-      isAndroid,
-      isIOS,
-      isCapacitor,
-      hasNativePlugins,
-      userAgent
-    });
+
     
     return isCapacitor && (isAndroid || isIOS) && hasNativePlugins;
   }, [isNative, platform]);
 
   // Verificar disponibilidad de la linterna
   const checkTorchAvailability = async () => {
-    console.log('[Torch] Verificando disponibilidad:', { isNative, isActuallyNative, platform });
+
     
     // Primero intentar con el plugin nativo
     if (isActuallyNative) {
@@ -164,7 +192,6 @@ const Tab6: React.FC = () => {
         const cameras = devices.filter((device) => device.kind === 'videoinput');
         
         if (cameras.length > 0) {
-          console.log('[Torch] Usando linterna web con getUserMedia');
           setIsAvailable(true);
           setUseWebTorch(true);
           setIsEnabled(webTorchToggled);
@@ -175,7 +202,6 @@ const Tab6: React.FC = () => {
       console.error('Error verificando cámaras:', error);
     }
     
-    console.log('[Torch] Linterna no disponible');
     setIsAvailable(false);
   };
 
@@ -194,7 +220,6 @@ const Tab6: React.FC = () => {
       setAlertMessage('Linterna encendida');
       setShowAlert(true);
     } catch (error: any) {
-      console.error('Error encendiendo linterna:', error);
       setAlertMessage(`Error: ${error.message || 'No se pudo encender la linterna'}`);
       setShowAlert(true);
     } finally {
@@ -213,7 +238,6 @@ const Tab6: React.FC = () => {
       setAlertMessage('Linterna apagada');
       setShowAlert(true);
     } catch (error: any) {
-      console.error('Error apagando linterna:', error);
       setAlertMessage(`Error: ${error.message || 'No se pudo apagar la linterna'}`);
       setShowAlert(true);
     } finally {
@@ -245,7 +269,6 @@ const Tab6: React.FC = () => {
       }
       setShowAlert(true);
     } catch (error: any) {
-      console.error('Error alternando linterna:', error);
       setAlertMessage(`Error: ${error.message || 'No se pudo alternar la linterna'}`);
       setShowAlert(true);
     } finally {
@@ -327,7 +350,6 @@ const Tab6: React.FC = () => {
               
               setMotionCount(prevCount => {
                 const newCount = prevCount + 1;
-                console.log(`Movimiento detectado! Total: ${newCount}/3`);
                 return newCount;
               });
             }
@@ -350,7 +372,6 @@ const Tab6: React.FC = () => {
   // Efecto para encender/apagar la linterna después de 3 movimientos
   useEffect(() => {
     if (isAutoLightEnabled && motionCount >= 3 && isAvailable) {
-      console.log('¡3 movimientos detectados! Alternando linterna...');
       
       // Alternar la linterna (encender o apagar)
       const toggleLight = async () => {
@@ -386,7 +407,6 @@ const Tab6: React.FC = () => {
             setMotionCount(0);
           }, 1000);
         } catch (error: any) {
-          console.error('Error alternando linterna automáticamente:', error);
           setAlertMessage(`Error: ${error.message || 'No se pudo alternar la linterna'}`);
           setShowAlert(true);
           setMotionCount(0);
@@ -396,6 +416,60 @@ const Tab6: React.FC = () => {
       toggleLight();
     }
   }, [motionCount, isAutoLightEnabled, isAvailable, useWebTorch, webTorchToggled, isEnabled]);
+
+  // Función para limpiar todos los recursos
+  const cleanupAll = useCallback(async () => {
+    
+    try {
+      // Apagar la linterna si está encendida
+      if (isEnabled) {
+        if (useWebTorch && webTorchToggled) {
+          await toggleWebTorch();
+        } else if (!useWebTorch) {
+          try {
+            await Torch.disable();
+          } catch (error) {
+            console.error('Error deshabilitando linterna nativa:', error);
+          }
+        }
+        setIsEnabled(false);
+      }
+      
+      // Desactivar detección de movimiento
+      setIsMotionActive(false);
+      setIsAutoLightEnabled(false);
+      setMotionCount(0);
+    
+    } catch (error) {
+    }
+  }, [isEnabled, useWebTorch, webTorchToggled, toggleWebTorch]);
+
+  // Limpiar cuando se sale de la vista (navegación entre tabs)
+  useIonViewWillLeave(() => {
+    cleanupAll();
+  });
+
+  // Limpiar cuando la página se oculta
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        cleanupAll();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [cleanupAll]);
+
+  // Limpiar al desmontar el componente
+  useEffect(() => {
+    return () => {
+      cleanupAll();
+    };
+  }, [cleanupAll]);
 
   // Efecto inicial
   useEffect(() => {

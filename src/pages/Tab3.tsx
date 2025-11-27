@@ -20,7 +20,9 @@ import {
   IonLabel,
   IonSpinner,
   IonAlert,
-  IonText
+  IonText,
+  useIonViewWillLeave,
+  useIonViewDidEnter
 } from '@ionic/react';
 import { 
   ReorderEndCustomEvent 
@@ -407,10 +409,8 @@ const Tab3: React.FC = () => {
       
       setCurrentPasskey(credentials);
       setPasskeyCreated(true);
-      console.log(credentials);
       return true;
     } catch (error: any) {
-      console.error('Error creando passkey:', error);
       return false;
     }
   };
@@ -425,10 +425,8 @@ const Tab3: React.FC = () => {
         }
       });
       
-      console.log(credentials);
       return true;
     } catch (error: any) {
-      console.error('Error verificando passkey:', error);
       return false;
     }
   };
@@ -444,12 +442,7 @@ const Tab3: React.FC = () => {
          (window.navigator as any).standalone ||
          document.referrer.includes('android-app://'));
 
-      console.log('[Biometric] Verificando plataforma:', {
-        isNative: currentIsNative,
-        platform: currentPlatform,
-        isPWA: currentIsPWA,
-        userAgent: navigator.userAgent
-      });
+
 
       // Si es PWA, mostrar mensaje específico
       if (currentIsPWA) {
@@ -479,13 +472,10 @@ const Tab3: React.FC = () => {
         return;
       }
 
-      // PLATAFORMA NATIVA - Verificar biometría real
-      console.log('[Biometric] Verificando biometría en plataforma nativa...');
       setPermissionStatus('Verificando...');
 
       try {
         const result = await NativeBiometric.isAvailable();
-        console.log('[Biometric] Resultado nativo:', result);
         
         const biometryTypeName = result.biometryType === BiometryType.FACE_ID ? 'Face ID' :
                                  result.biometryType === BiometryType.TOUCH_ID ? 'Touch ID' :
@@ -505,7 +495,7 @@ const Tab3: React.FC = () => {
           setMessage(`Configure ${currentPlatform === 'ios' ? 'Face ID/Touch ID' : 'Huella digital'} en ajustes del dispositivo`);
         }
       } catch (error: any) {
-        console.error('[Biometric] Error en plugin nativo:', error);
+
         setBiometry({
           isAvailable: false,
           biometryType: BiometryType.NONE,
@@ -517,7 +507,6 @@ const Tab3: React.FC = () => {
       }
 
     } catch (error: any) {
-      console.error('[Biometric] Error general:', error);
       setMessage(`Error: ${error?.message || error}`);
     } finally {
       setIsLoading(false);
@@ -559,7 +548,6 @@ const Tab3: React.FC = () => {
 
     setIsLoading(true);
     try {
-      console.log('[Biometric] Iniciando autenticación...');
       
       await NativeBiometric.verifyIdentity({
         reason: 'Acceso al POKÉMON PC',
@@ -575,7 +563,6 @@ const Tab3: React.FC = () => {
       setIsAuthenticated(true);
       
     } catch (error: any) {
-      console.error('[Biometric] Error en autenticación:', error);
       
       // Manejar errores específicos
       if (error.code === 'AUTHENTICATION_FAILED') {
@@ -594,6 +581,47 @@ const Tab3: React.FC = () => {
     }
   };
 
+  // Función para limpiar recursos
+  const cleanupAll = useCallback(() => {
+    // Limpiar estados de carga
+    setIsLoading(false);
+    setIsLoadingData(false);
+    setError(null);
+    // No cerrar la autenticación biométrica, solo limpiar estados de carga
+  }, []);
+
+  // Limpiar cuando se sale de la vista (navegación entre tabs)
+  useIonViewWillLeave(() => {
+    cleanupAll();
+  });
+
+  // Reinicializar cuando se entra a la vista
+  useIonViewDidEnter(() => {
+    // No necesitamos hacer nada especial aquí, los useEffect ya manejan la inicialización
+  });
+
+  // Limpiar cuando la página se oculta
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        cleanupAll();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [cleanupAll]);
+
+  // Limpiar al desmontar el componente
+  useEffect(() => {
+    return () => {
+      cleanupAll();
+    };
+  }, [cleanupAll]);
+
   // Efecto inicial (lógica completa de Tab5)
   useEffect(() => {
     const initialize = async () => {
@@ -607,7 +635,6 @@ const Tab3: React.FC = () => {
         try {
       await checkBiometricAvailability();
         } catch (error) {
-          console.error('Error verificando biometría:', error);
         }
       }
     };
@@ -617,10 +644,12 @@ const Tab3: React.FC = () => {
 
   // Cargar datos cuando se autentica
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && isOnline) {
       loadData();
+    } else if (isAuthenticated && !isOnline) {
+      setError('Sin conexión a internet. No se pueden cargar los datos del PC.');
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isOnline]);
 
   const currentBox = pcBoxes[selectedBox];
   const currentPokemon = currentView === 'team' ? pokemonTeam : currentBox.pokemon;
