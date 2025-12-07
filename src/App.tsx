@@ -79,8 +79,14 @@ const AppContent: React.FC = () => {
       setIsAuthenticated(authService.isAuthenticated());
     };
 
-    // Escuchar cambios en localStorage
+    // Escuchar cambios en localStorage (para cambios entre ventanas)
     window.addEventListener('storage', handleStorageChange);
+    
+    // Escuchar eventos personalizados para cambios en la misma ventana
+    const handleCustomStorage = () => {
+      setIsAuthenticated(authService.isAuthenticated());
+    };
+    window.addEventListener('auth-changed', handleCustomStorage);
     
     // También verificar periódicamente (para cambios en la misma ventana)
     const interval = setInterval(() => {
@@ -88,11 +94,12 @@ const AppContent: React.FC = () => {
       if (currentAuth !== isAuthenticated) {
         setIsAuthenticated(currentAuth);
       }
-    }, 100);
+    }, 50); // Reducido a 50ms para detectar cambios más rápido
 
     return () => {
       clearInterval(interval);
       window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('auth-changed', handleCustomStorage);
     };
   }, [isAuthenticated]);
 

@@ -125,17 +125,21 @@ const VerifyCode: React.FC = () => {
       if (response.token) {
         // Asegurarse de que el token se guardó correctamente
         const token = authService.getToken();
-        if (token) {
-          // Forzar actualización del estado de autenticación disparando un evento de storage
-          // Esto hará que App.tsx detecte el cambio y muestre las tabs
-          window.dispatchEvent(new Event('storage'));
-          
-          // Usar window.location para forzar un refresh completo y asegurar que App.tsx detecte el token
-          // Esto es más confiable que history.push cuando hay cambios en el estado de autenticación
-          window.location.href = '/tab1';
-        } else {
+        if (!token) {
           throw new Error('Error al guardar el token de autenticación');
         }
+        
+        // Forzar actualización del estado de autenticación disparando un evento personalizado
+        // Esto hará que App.tsx detecte el cambio y muestre las tabs
+        window.dispatchEvent(new Event('auth-changed'));
+        
+        // Pequeño delay para asegurar que App.tsx detecte el cambio antes de redirigir
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Redirigir a tab1
+        history.push('/tab1');
+      } else {
+        throw new Error('No se recibió token en la respuesta');
       }
     } catch (err: any) {
       setError(err.message || 'Código inválido. Por favor intenta nuevamente.');
