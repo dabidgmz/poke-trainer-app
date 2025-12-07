@@ -1,0 +1,1 @@
+export const HCAPTCHA_SITE_KEY = 'a8e8a042-857a-417a-967c-21907d940a46';

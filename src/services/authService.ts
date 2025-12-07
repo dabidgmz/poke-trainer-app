@@ -1,86 +1,7 @@
 // Servicio de autenticación para la API de entrenadores
+import { API_URL } from '../config/api';
+import { LoginData, LoginResponse, LoginResponse2FA, RegisterData, ResendCodeData, UpdateProfileData, User, VerifyCodeData } from '../interfaces/Auth';
 import offlineCache from './offlineCache';
-
-// ============================================
-// CONFIGURACIÓN DE ENTORNO
-// ============================================
-// Para cambiar entre desarrollo y producción, comenta/descomenta las líneas:
-
-// DESARROLLO (localhost)
-// const API_BASE_URL_DEV = 'http://127.0.0.1:3333';
-
-// PRODUCCIÓN
-const API_BASE_URL_PROD = 'https://jrctesthub.live';
-
-// Selecciona el entorno activo (comenta/descomenta según necesites):
-// const API_BASE_URL_MANUAL = API_BASE_URL_DEV;  // ← DESARROLLO (descomentado)
-const API_BASE_URL_MANUAL = API_BASE_URL_PROD;  // ← PRODUCCIÓN (comentado)
-
-// ============================================
-// Alternativamente, puedes usar variables de entorno:
-// Si existe VITE_API_URL, se usará esa URL
-// ============================================
-const getBaseUrl = () => {
-  // Si hay una variable de entorno, usarla
-  if (import.meta.env.VITE_API_URL) {
-    const url = import.meta.env.VITE_API_URL;
-    return url.endsWith('/') ? url.slice(0, -1) : url;
-  }
-  // Si no, usar la configuración manual de arriba
-  return API_BASE_URL_MANUAL;
-};
-
-const API_BASE_URL = getBaseUrl();
-
-export interface RegisterData {
-  name: string;
-  email: string;
-  password: string;
-  phone?: string;
-  gender?: string;
-}
-
-export interface LoginData {
-  email: string;
-  password: string;
-}
-
-export interface User {
-  id: number;
-  name: string;
-  email: string;
-  phone?: string;
-  gender?: string;
-  role: 'entrenador' | 'profesor';
-  isVerified: boolean;
-  isBanned: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface LoginResponse {
-  type: string;
-  token: string;
-  user: User;
-}
-
-export interface LoginResponse2FA {
-  message: string;
-  requiresCode: boolean;
-  user: User;
-}
-
-export interface VerifyCodeData {
-  email: string;
-  code: string;
-}
-
-export interface UpdateProfileData {
-  name?: string;
-  email?: string;
-  phone?: string;
-  gender?: string;
-}
 
 class AuthService {
   private tokenKey = 'pokemon_jwt_token';
@@ -110,7 +31,7 @@ class AuthService {
   }
 
   async register(data: RegisterData): Promise<{ message: string; userId: number }> {
-    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+    const response = await fetch(`${API_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -125,7 +46,7 @@ class AuthService {
   }
 
   async login(data: LoginData): Promise<LoginResponse | LoginResponse2FA> {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    const response = await fetch(`${API_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -147,7 +68,7 @@ class AuthService {
 
   async getProfile(): Promise<User> {
     try {
-    const response = await fetch(`${API_BASE_URL}/auth/me`, {
+    const response = await fetch(`${API_URL}/auth/me`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     });
@@ -171,7 +92,7 @@ class AuthService {
         if ('caches' in window) {
           try {
             const cache = await caches.open('pokemon-profile-cache');
-            const cachedResponse = await cache.match(`${API_BASE_URL}/auth/me`);
+            const cachedResponse = await cache.match(`${API_URL}/auth/me`);
             if (cachedResponse) {
               const profileData = await cachedResponse.json();
               return profileData;
@@ -192,7 +113,7 @@ class AuthService {
 
   async getTeam(): Promise<{ team: any[]; teamCount: number; maxTeamSize: number }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/entrenadores/me/team`, {
+      const response = await fetch(`${API_URL}/entrenadores/me/team`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
       });
@@ -219,7 +140,7 @@ class AuthService {
         if ('caches' in window) {
           try {
             const cache = await caches.open('pokemon-team-cache');
-            const cachedResponse = await cache.match(`${API_BASE_URL}/entrenadores/me/team`);
+            const cachedResponse = await cache.match(`${API_URL}/entrenadores/me/team`);
             if (cachedResponse) {
               const teamData = await cachedResponse.json();
               return teamData;
@@ -233,7 +154,7 @@ class AuthService {
         if (cachedTeam) {
           return cachedTeam;
         }
-        throw new Error(`No se pudo conectar con la API. Verifica que el servidor esté corriendo en ${API_BASE_URL}`);
+        throw new Error(`No se pudo conectar con la API. Verifica que el servidor esté corriendo en ${API_URL}`);
       }
       throw error;
     }
@@ -241,7 +162,7 @@ class AuthService {
 
   async getPC(): Promise<{ box1: any[]; box2: any[]; box3: any[]; counts: { box1: number; box2: number; box3: number; total: number } }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/entrenadores/me/pc`, {
+      const response = await fetch(`${API_URL}/entrenadores/me/pc`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
       });
@@ -261,7 +182,7 @@ class AuthService {
       return response.json();
     } catch (error: any) {
       if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
-        throw new Error(`No se pudo conectar con la API. Verifica que el servidor esté corriendo en ${API_BASE_URL}`);
+        throw new Error(`No se pudo conectar con la API. Verifica que el servidor esté corriendo en ${API_URL}`);
       }
       throw error;
     }
@@ -274,7 +195,7 @@ class AuthService {
         body.pcBox = pcBox;
       }
 
-      const response = await fetch(`${API_BASE_URL}/entrenadores/me/pokemon/${pokemonId}/move`, {
+      const response = await fetch(`${API_URL}/entrenadores/me/pokemon/${pokemonId}/move`, {
         method: 'PATCH',
         headers: this.getAuthHeaders(),
         body: JSON.stringify(body),
@@ -295,7 +216,7 @@ class AuthService {
       return response.json();
     } catch (error: any) {
       if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
-        throw new Error(`No se pudo conectar con la API. Verifica que el servidor esté corriendo en ${API_BASE_URL}`);
+        throw new Error(`No se pudo conectar con la API. Verifica que el servidor esté corriendo en ${API_URL}`);
       }
       throw error;
     }
@@ -322,7 +243,7 @@ class AuthService {
         body.pcBox = pcBox;
       }
 
-      const response = await fetch(`${API_BASE_URL}/captures/scan`, {
+      const response = await fetch(`${API_URL}/captures/scan`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
         body: JSON.stringify(body),
@@ -343,7 +264,7 @@ class AuthService {
       return response.json();
     } catch (error: any) {
       if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
-        throw new Error(`No se pudo conectar con la API. Verifica que el servidor esté corriendo en ${API_BASE_URL}`);
+        throw new Error(`No se pudo conectar con la API. Verifica que el servidor esté corriendo en ${API_URL}`);
       }
       throw error;
     }
@@ -363,7 +284,7 @@ class AuthService {
     };
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/captures/confirm`, {
+      const response = await fetch(`${API_URL}/captures/confirm`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
         body: JSON.stringify({ captureId, pcBox }),
@@ -384,14 +305,14 @@ class AuthService {
       return response.json();
     } catch (error: any) {
       if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
-        throw new Error(`No se pudo conectar con la API. Verifica que el servidor esté corriendo en ${API_BASE_URL}`);
+        throw new Error(`No se pudo conectar con la API. Verifica que el servidor esté corriendo en ${API_URL}`);
       }
       throw error;
     }
   }
 
   async updateProfile(id: number, data: UpdateProfileData): Promise<{ message: string; entrenador: User }> {
-    const response = await fetch(`${API_BASE_URL}/entrenadores/${id}`, {
+    const response = await fetch(`${API_URL}/entrenadores/${id}`, {
       method: 'PUT',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
@@ -414,7 +335,7 @@ class AuthService {
     
     if (token) {
       try {
-        await fetch(`${API_BASE_URL}/auth/logout`, {
+        await fetch(`${API_URL}/auth/logout`, {
           method: 'POST',
           headers: this.getAuthHeaders(),
         });
@@ -428,7 +349,7 @@ class AuthService {
   }
 
   async verifyCode(data: VerifyCodeData): Promise<LoginResponse> {
-    const response = await fetch(`${API_BASE_URL}/auth/verify-code`, {
+    const response = await fetch(`${API_URL}/auth/verify-code`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -448,11 +369,11 @@ class AuthService {
     return result;
   }
 
-  async resendCode(email: string): Promise<{ message: string; expiresIn: string }> {
-    const response = await fetch(`${API_BASE_URL}/auth/resend-code`, {
+  async resendCode(data: ResendCodeData): Promise<{ message: string; expiresIn: string }> {
+    const response = await fetch(`${API_URL}/auth/resend-code`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify(data),
     });
 
     if (!response.ok) {
@@ -464,7 +385,7 @@ class AuthService {
   }
 
   async verifyEmail(data: VerifyCodeData): Promise<{ message: string }> {
-    const response = await fetch(`${API_BASE_URL}/auth/verify-email`, {
+    const response = await fetch(`${API_URL}/auth/verify-email`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -478,11 +399,11 @@ class AuthService {
     return response.json();
   }
 
-  async resendVerification(email: string): Promise<{ message: string }> {
-    const response = await fetch(`${API_BASE_URL}/auth/resend-verification`, {
+  async resendVerification(data: ResendCodeData): Promise<{ message: string }> {
+    const response = await fetch(`${API_URL}/auth/resend-verification`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify(data),
     });
 
     if (!response.ok) {

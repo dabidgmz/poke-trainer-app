@@ -1,3 +1,4 @@
+// pages/VerifyEmail.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import {
   IonPage,
@@ -19,6 +20,11 @@ import { useHistory, useLocation } from 'react-router-dom';
 import authService from '../services/authService';
 import './VerifyEmail.css';
 
+// 🔹 NUEVOS IMPORTS
+import HCaptchaComponent from '../components/HCaptcha';
+import { HCAPTCHA_SITE_KEY } from '../config/hcaptcha';
+import { VerifyCodeData, ResendCodeData } from '../interfaces/Auth';
+
 interface LocationState {
   email: string;
 }
@@ -34,18 +40,21 @@ const VerifyEmail: React.FC = () => {
   const [countdown, setCountdown] = useState(0);
   const inputRefs = useRef<(HTMLIonInputElement | null)[]>([]);
 
+  // 🔹 Estado para hCaptcha
+  const [hCaptchaToken, setHCaptchaToken] = useState<string | null>(null);
+  const [hCaptchaError, setHCaptchaError] = useState<string | null>(null);
+
   const email = location.state?.email || '';
 
   useEffect(() => {
     if (!email) {
-      // Si no hay email, redirigir a login en lugar de register
       history.replace('/login');
     }
   }, [email, history]);
 
   useEffect(() => {
     if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      const timer = setTimeout(() => setCountdown((prev) => prev - 1), 1000);
       return () => clearTimeout(timer);
     }
   }, [countdown]);
@@ -85,14 +94,27 @@ const VerifyEmail: React.FC = () => {
       return;
     }
 
+    if (!hCaptchaToken) {
+      setHCaptchaError('Por favor completa el captcha antes de verificar el email.');
+      setShowErrorAlert(true);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
-      await authService.verifyEmail({ email, code: codeString });
-      // Limpiar cualquier estado antes de redirigir
+      const payload: VerifyCodeData = {
+        email,
+        code: codeString,
+        hCaptchaToken, // 👈 se envía al backend
+      };
+
+      await authService.verifyEmail(payload);
+
+      // Limpiar estado antes de redirigir
       setCode(['', '', '', '', '', '']);
-      // Usar replace en lugar de push para evitar que pueda volver atrás
+
       history.replace('/login', { verified: true });
     } catch (err: any) {
       setError(err.message || 'Código inválido. Por favor intenta nuevamente.');
@@ -105,10 +127,21 @@ const VerifyEmail: React.FC = () => {
   };
 
   const handleResendCode = async () => {
+    if (!hCaptchaToken) {
+      setHCaptchaError('Por favor completa el captcha antes de reenviar el código.');
+      setShowErrorAlert(true);
+      return;
+    }
+
     setIsResending(true);
     setError(null);
     try {
-      await authService.resendVerification(email);
+      const payload: ResendCodeData = {
+        email,
+        hCaptchaToken, // 👈 también se usa aquí
+      };
+
+      await authService.resendVerification(payload);
       setCountdown(60);
     } catch (err: any) {
       setError(err.message || 'Error al reenviar el código');
@@ -124,7 +157,12 @@ const VerifyEmail: React.FC = () => {
     <IonPage className="verify-email-page">
       <IonHeader>
         <IonToolbar className="auth-toolbar">
-          <IonButton fill="clear" slot="start" onClick={() => history.push('/register')} className="back-button">
+          <IonButton
+            fill="clear"
+            slot="start"
+            onClick={() => history.push('/register')}
+            className="back-button"
+          >
             <IonIcon icon={arrowBack} />
           </IonButton>
           <IonTitle className="auth-title">Verificar Email</IonTitle>
@@ -151,18 +189,35 @@ const VerifyEmail: React.FC = () => {
                     inputMode="numeric"
                     maxlength={1}
                     value={digit}
-                    onIonInput={(e) => handleCodeChange(index, e.detail.value!)}
+                    onIonInput={(e) => handleCodeChange(index, e.detail.value || '')}
                     onKeyDown={(e) => handleKeyDown(index, e)}
                     className="code-input"
                   />
                 ))}
               </div>
-              {error && (
+
+              {/* hCaptcha */}
+              <HCaptchaComponent
+                siteKey={HCAPTCHA_SITE_KEY}
+                onTokenChange={(token) => {
+                  setHCaptchaToken(token || null);
+                  if (token) setHCaptchaError(null);
+                }}
+                onErrorChange={(msg) => setHCaptchaError(msg)}
+              />
+
+              {(error || hCaptchaError) && (
                 <IonText color="danger" className="error-text">
-                  <p>{error}</p>
+                  <p>{error || hCaptchaError}</p>
                 </IonText>
               )}
-              <IonButton expand="block" className="auth-submit-button" disabled={!isCodeComplete || isLoading} onClick={handleVerify}>
+
+              <IonButton
+                expand="block"
+                className="auth-submit-button"
+                disabled={!isCodeComplete || isLoading || !hCaptchaToken}
+                onClick={handleVerify}
+              >
                 {isLoading ? <IonSpinner name="crescent" /> : (
                   <>
                     <IonIcon icon={checkmarkCircle} slot="start" />
@@ -170,10 +225,21 @@ const VerifyEmail: React.FC = () => {
                   </>
                 )}
               </IonButton>
+
               <div className="resend-container">
                 <IonText className="resend-text">¿No recibiste el código?</IonText>
-                <IonButton fill="clear" size="small" onClick={handleResendCode} disabled={isResending || countdown > 0} className="resend-button">
-                  {isResending ? <IonSpinner name="crescent" /> : countdown > 0 ? `Reenviar en ${countdown}s` : (
+                <IonButton
+                  fill="clear"
+                  size="small"
+                  onClick={handleResendCode}
+                  disabled={isResending || countdown > 0 || !hCaptchaToken}
+                  className="resend-button"
+                >
+                  {isResending ? (
+                    <IonSpinner name="crescent" />
+                  ) : countdown > 0 ? (
+                    `Reenviar en ${countdown}s`
+                  ) : (
                     <>
                       <IonIcon icon={refresh} slot="start" />
                       Reenviar Código
@@ -185,7 +251,13 @@ const VerifyEmail: React.FC = () => {
           </IonCard>
         </div>
       </IonContent>
-      <IonAlert isOpen={showErrorAlert} onDidDismiss={() => setShowErrorAlert(false)} header="Error" message={error || 'Ocurrió un error'} buttons={['OK']} />
+      <IonAlert
+        isOpen={showErrorAlert}
+        onDidDismiss={() => setShowErrorAlert(false)}
+        header="Error"
+        message={error || hCaptchaError || 'Ocurrió un error'}
+        buttons={['OK']}
+      />
     </IonPage>
   );
 };

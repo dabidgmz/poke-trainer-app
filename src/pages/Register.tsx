@@ -20,8 +20,13 @@ import {
 } from '@ionic/react';
 import { person, mail, lockClosed, call, personOutline, logIn, eye, eyeOff } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
-import authService, { RegisterData } from '../services/authService';
+import authService from '../services/authService';
 import './Register.css';
+import { RegisterData } from '../interfaces/Auth';
+
+// 🔹 IMPORTS NUEVOS
+import HCaptchaComponent from '../components/HCaptcha';
+import { HCAPTCHA_SITE_KEY } from '../config/hcaptcha';
 
 const Register: React.FC = () => {
   const history = useHistory();
@@ -31,6 +36,7 @@ const Register: React.FC = () => {
     password: '',
     phone: '',
     gender: '',
+    hCaptchaToken: '', // 👈 ya está en la interfaz
   });
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -56,6 +62,9 @@ const Register: React.FC = () => {
     hasSpecialChar: false,
   });
   const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
+
+  // 🔹 Error específico para el captcha
+  const [hCaptchaError, setHCaptchaError] = useState<string | null>(null);
 
   // Validar nombre en tiempo real
   const validateName = (name: string) => {
@@ -92,7 +101,6 @@ const Register: React.FC = () => {
       setPhoneError(null);
       return true; // Es opcional
     }
-    // Remover espacios, guiones, paréntesis y otros caracteres
     const digitsOnly = phone.replace(/\D/g, '');
     if (digitsOnly.length !== 10) {
       setPhoneError('El teléfono debe tener exactamente 10 dígitos');
@@ -135,7 +143,6 @@ const Register: React.FC = () => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setError(null);
 
-    // Validaciones en tiempo real
     if (field === 'name') {
       validateName(value);
     } else if (field === 'email') {
@@ -144,7 +151,6 @@ const Register: React.FC = () => {
       validatePhone(value);
     } else if (field === 'password') {
       validatePasswordRealTime(value);
-      // También validar confirmación si ya hay texto
       if (confirmPassword.length > 0) {
         validateConfirmPassword(confirmPassword, value);
       }
@@ -157,7 +163,6 @@ const Register: React.FC = () => {
   };
 
   const validateForm = (): boolean => {
-    // Validación de nombre: mínimo 3 caracteres
     if (!validateName(formData.name) || formData.name.length < 3) {
       setError('El nombre debe tener al menos 3 caracteres');
       return false;
@@ -167,26 +172,22 @@ const Register: React.FC = () => {
       return false;
     }
 
-    // Validación de email (debe ser Gmail)
     if (!validateEmail(formData.email)) {
       setError(emailError || 'El email debe ser de Gmail (@gmail.com)');
       return false;
     }
 
-    // Validación de teléfono (10 dígitos si se proporciona)
     if (formData.phone && !validatePhone(formData.phone)) {
       setError(phoneError || 'El teléfono debe tener exactamente 10 dígitos');
       return false;
     }
 
-    // Validación de contraseña
     const passwordValidation = validatePassword(formData.password);
     if (!passwordValidation.isValid) {
       setError('La contraseña debe tener mayúscula, minúscula, número y caracteres especiales');
       return false;
     }
 
-    // Validación de confirmación de contraseña
     if (!validateConfirmPassword(confirmPassword, formData.password)) {
       setError(confirmPasswordError || 'Las contraseñas no coinciden');
       return false;
@@ -225,6 +226,13 @@ const Register: React.FC = () => {
       return;
     }
 
+    // 🔹 Validar que haya token de hCaptcha
+    if (!formData.hCaptchaToken) {
+      setHCaptchaError('Por favor completa el captcha antes de continuar.');
+      setShowErrorAlert(true);
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -232,26 +240,27 @@ const Register: React.FC = () => {
         name: formData.name,
         email: formData.email,
         password: formData.password,
+        hCaptchaToken: formData.hCaptchaToken, // 👈 se envía al backend
         ...(formData.phone && { phone: formData.phone }),
         ...(formData.gender && { gender: formData.gender }),
       };
 
       await authService.register(registerData);
-      // Asegurar que no haya token guardado después del registro
       authService.removeToken();
-      // Guardar el email antes de limpiar el formulario
       const registeredEmail = formData.email;
-      // Limpiar el formulario después del registro exitoso
+
+      // Limpiar el formulario
       setFormData({
         name: '',
         email: '',
         password: '',
         phone: '',
         gender: '',
+        hCaptchaToken: '', // 👈 limpiamos el token también
       });
       setConfirmPassword('');
       setShowSuccessAlert(true);
-      // Guardar el email en el estado para usarlo después
+
       setTimeout(() => {
         history.push('/verify-email', { email: registeredEmail });
       }, 100);
@@ -265,7 +274,6 @@ const Register: React.FC = () => {
 
   const handleSuccessClose = () => {
     setShowSuccessAlert(false);
-    // El email ya se pasó en handleSubmit, solo cerrar el alert
   };
 
   return (
@@ -290,6 +298,7 @@ const Register: React.FC = () => {
           <IonCard className="auth-card">
             <IonCardContent>
               <form onSubmit={handleSubmit}>
+                {/* Nombre */}
                 <IonItem className="auth-input-item" lines="none">
                   <IonLabel position="stacked" className="auth-label">
                     <IonIcon icon={person} className="label-icon" />
@@ -298,7 +307,7 @@ const Register: React.FC = () => {
                   <IonInput
                     type="text"
                     value={formData.name}
-                    onIonInput={(e) => handleInputChange('name', e.detail.value!)}
+                    onIonInput={(e) => handleInputChange('name', e.detail.value || '')}
                     placeholder="Tu nombre completo"
                     required
                     className={`auth-input ${nameError ? 'input-error' : ''}`}
@@ -311,6 +320,7 @@ const Register: React.FC = () => {
                   )}
                 </IonItem>
 
+                {/* Email */}
                 <IonItem className="auth-input-item" lines="none">
                   <IonLabel position="stacked" className="auth-label">
                     <IonIcon icon={mail} className="label-icon" />
@@ -319,7 +329,7 @@ const Register: React.FC = () => {
                   <IonInput
                     type="email"
                     value={formData.email}
-                    onIonInput={(e) => handleInputChange('email', e.detail.value!)}
+                    onIonInput={(e) => handleInputChange('email', e.detail.value || '')}
                     placeholder="tu@gmail.com"
                     required
                     className={`auth-input ${emailError ? 'input-error' : ''}`}
@@ -336,6 +346,7 @@ const Register: React.FC = () => {
                   )}
                 </IonItem>
 
+                {/* Teléfono */}
                 <IonItem className="auth-input-item" lines="none">
                   <IonLabel position="stacked" className="auth-label">
                     <IonIcon icon={call} className="label-icon" />
@@ -344,7 +355,7 @@ const Register: React.FC = () => {
                   <IonInput
                     type="tel"
                     value={formData.phone}
-                    onIonInput={(e) => handleInputChange('phone', e.detail.value!)}
+                    onIonInput={(e) => handleInputChange('phone', e.detail.value || '')}
                     placeholder="1234567890"
                     className={`auth-input ${phoneError ? 'input-error' : ''}`}
                     maxlength={20}
@@ -361,6 +372,7 @@ const Register: React.FC = () => {
                   )}
                 </IonItem>
 
+                {/* Género */}
                 <IonItem className="auth-input-item" lines="none">
                   <IonLabel position="stacked" className="auth-label">
                     <IonIcon icon={personOutline} className="label-icon" />
@@ -379,6 +391,7 @@ const Register: React.FC = () => {
                   </IonSelect>
                 </IonItem>
 
+                {/* Contraseña */}
                 <IonItem className="auth-input-item" lines="none">
                   <IonLabel position="stacked" className="auth-label">
                     <IonIcon icon={lockClosed} className="label-icon" />
@@ -388,12 +401,12 @@ const Register: React.FC = () => {
                     <IonInput
                       type={showPassword ? 'text' : 'password'}
                       value={formData.password}
-                      onIonInput={(e) => handleInputChange('password', e.detail.value!)}
-                    placeholder="Contraseña"
+                      onIonInput={(e) => handleInputChange('password', e.detail.value || '')}
+                      placeholder="Contraseña"
                       required
                       className="auth-input"
                       style={{ flex: '1', paddingRight: '45px' }}
-                    maxlength={180}
+                      maxlength={180}
                     />
                     <IonButton
                       fill="clear"
@@ -432,12 +445,12 @@ const Register: React.FC = () => {
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px', color: passwordErrors.hasSpecialChar ? '#10b981' : '#ef4444' }}>
                         {passwordErrors.hasSpecialChar ? '✓' : '✗'} Carácter especial
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
                 </IonItem>
 
-
+                {/* Confirmar contraseña */}
                 <IonItem className="auth-input-item" lines="none">
                   <IonLabel position="stacked" className="auth-label">
                     <IonIcon icon={lockClosed} className="label-icon" />
@@ -447,7 +460,7 @@ const Register: React.FC = () => {
                     <IonInput
                       type={showConfirmPassword ? 'text' : 'password'}
                       value={confirmPassword}
-                      onIonInput={(e) => handleConfirmPasswordChange(e.detail.value!)}
+                      onIonInput={(e) => handleConfirmPasswordChange(e.detail.value || '')}
                       placeholder="Repite tu contraseña"
                       required
                       className={`auth-input ${confirmPasswordError ? 'input-error' : ''}`}
@@ -489,18 +502,45 @@ const Register: React.FC = () => {
                   )}
                 </IonItem>
 
+                {/* 🔹 hCaptcha */}
+                <HCaptchaComponent
+                  siteKey={HCAPTCHA_SITE_KEY}
+                  onTokenChange={(token) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      hCaptchaToken: token || '',
+                    }));
+                    if (token) setHCaptchaError(null);
+                  }}
+                  onErrorChange={(msg) => setHCaptchaError(msg)}
+                />
 
+                {hCaptchaError && (
+                  <IonText color="danger" className="error-text">
+                    <p>{hCaptchaError}</p>
+                  </IonText>
+                )}
+
+                {/* Error general */}
                 {error && (
                   <IonText color="danger" className="error-text">
                     <p>{error}</p>
                   </IonText>
                 )}
 
+                {/* Botón de enviar */}
                 <IonButton
                   type="submit"
                   expand="block"
                   className="auth-submit-button"
-                  disabled={isLoading || !formData.name || !formData.email || !formData.password || !confirmPassword}
+                  disabled={
+                    isLoading ||
+                    !formData.name ||
+                    !formData.email ||
+                    !formData.password ||
+                    !confirmPassword ||
+                    !formData.hCaptchaToken // 👈 no deja registrar sin captcha
+                  }
                 >
                   {isLoading ? <IonSpinner name="crescent" /> : (
                     <>
@@ -524,11 +564,17 @@ const Register: React.FC = () => {
         </div>
       </IonContent>
 
-      <IonAlert isOpen={showErrorAlert} onDidDismiss={() => setShowErrorAlert(false)} header="Error" message={error || 'Ocurrió un error'} buttons={['OK']} />
+      <IonAlert
+        isOpen={showErrorAlert}
+        onDidDismiss={() => setShowErrorAlert(false)}
+        header="Error"
+        message={error || 'Ocurrió un error'}
+        buttons={['OK']}
+      />
 
       <IonAlert
         isOpen={showSuccessAlert}
-        onDidDismiss={() => setShowSuccessAlert(false)}
+        onDidDismiss={handleSuccessClose}
         header="¡Registro Exitoso!"
         message="Tu cuenta ha sido creada. Hemos enviado un código de verificación de 6 dígitos a tu email. Serás redirigido a la página de verificación..."
         buttons={['OK']}

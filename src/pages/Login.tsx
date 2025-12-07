@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   IonPage,
   IonHeader,
@@ -6,8 +6,6 @@ import {
   IonTitle,
   IonContent,
   IonCard,
-  IonCardHeader,
-  IonCardTitle,
   IonCardContent,
   IonItem,
   IonLabel,
@@ -20,9 +18,13 @@ import {
 } from '@ionic/react';
 import { mail, lockClosed, logIn, arrowBack, eye, eyeOff, checkmarkCircle, download } from 'ionicons/icons';
 import { useHistory, useLocation } from 'react-router-dom';
-import { Capacitor } from '@capacitor/core';
-import authService, { LoginData } from '../services/authService';
+import authService from '../services/authService';
 import './Login.css';
+import { LoginData } from '../interfaces/Auth';
+
+// 🔹 IMPORTS NUEVOS
+import HCaptchaComponent from '../components/HCaptcha';
+import { HCAPTCHA_SITE_KEY } from '../config/hcaptcha';
 
 interface LocationState {
   verified?: boolean;
@@ -34,6 +36,7 @@ const Login: React.FC = () => {
   const [formData, setFormData] = useState<LoginData>({
     email: '',
     password: '',
+    hCaptchaToken: '',     // 👈 ya lo tienes en la interfaz
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +46,9 @@ const Login: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+
+  // 🔹 Error específico para el captcha
+  const [hCaptchaError, setHCaptchaError] = useState<string | null>(null);
 
   // Detectar si la app ya está instalada
   useEffect(() => {
@@ -54,16 +60,13 @@ const Login: React.FC = () => {
   // Capturar el evento beforeinstallprompt para PWA
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
-      // Prevenir el prompt automático
       e.preventDefault();
-      // Guardar el evento para usarlo más tarde
       setDeferredPrompt(e);
       setIsInstallable(true);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // Detectar cuando la app se instala
     const handleAppInstalled = () => {
       setIsInstalled(true);
       setIsInstallable(false);
@@ -81,41 +84,28 @@ const Login: React.FC = () => {
   const handleInputChange = (field: keyof LoginData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setError(null);
-    // Ocultar mensaje de éxito cuando el usuario empiece a escribir
     if (showSuccessMessage) {
       setShowSuccessMessage(false);
     }
   };
 
   const handleDownloadApp = async () => {
-    // Si la app ya está instalada, no hacer nada
-    if (isInstalled) {
-      return;
-    }
+    if (isInstalled) return;
 
-    // Si tenemos el evento beforeinstallprompt (Android/Chrome)
     if (deferredPrompt) {
       try {
-        // Mostrar el prompt de instalación
         await deferredPrompt.prompt();
-        // Esperar a que el usuario responda
-        const { outcome } = await deferredPrompt.userChoice;
-
-        // Limpiar el prompt
+        await deferredPrompt.userChoice;
         setDeferredPrompt(null);
         setIsInstallable(false);
-      } catch (error) {
-
-      }
+      } catch (error) {}
       return;
     }
 
-    // Para iOS, mostrar instrucciones
     const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
     const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream;
 
     if (isIOS) {
-      // Mostrar instrucciones para iOS
       alert(
         'Para instalar la app en iOS:\n\n' +
         '1. Toca el botón de compartir (cuadrado con flecha)\n' +
@@ -125,7 +115,6 @@ const Login: React.FC = () => {
       return;
     }
 
-    // Si no es instalable, mostrar mensaje
     alert('La instalación de la app no está disponible en este momento. Asegúrate de estar usando un navegador compatible (Chrome, Edge, Safari) y que la app cumpla con los requisitos de instalación.');
   };
 
@@ -134,23 +123,22 @@ const Login: React.FC = () => {
     setIsLoading(true);
     setError(null);
 
+    // 🔹 Validar que haya token de hCaptcha
+    if (!formData.hCaptchaToken) {
+      setIsLoading(false);
+      setHCaptchaError('Por favor completa el captcha antes de continuar.');
+      return;
+    }
+
     try {
       const response = await authService.login(formData);
 
-      // Si requiere código 2FA (profesores)
-      // Después del logout, el backend debe enviar requiresCode para todos los usuarios
       if ('requiresCode' in response && response.requiresCode) {
-        // Redirigir a verificación 2FA con código de 6 dígitos
         history.push('/verify-code', { email: formData.email, user: response.user });
         return;
       }
 
-      // Si el backend devuelve token directamente (entrenadores sin 2FA requerido)
-      // Esto solo debería pasar si el backend no requiere 2FA después del logout
       if ('token' in response) {
-        // Si el backend no requiere 2FA, ir directamente a tab1
-        // Pero según el requerimiento, todos deben pasar por 2FA después del logout
-        // El backend debe enviar requiresCode para forzar 2FA
         history.push('/tab1');
       }
     } catch (err: any) {
@@ -245,7 +233,7 @@ const Login: React.FC = () => {
                   <IonInput
                     type="email"
                     value={formData.email}
-                    onIonInput={(e) => handleInputChange('email', e.detail.value!)}
+                    onIonInput={(e) => handleInputChange('email', e.detail.value || '')}
                     placeholder="tu@email.com"
                     required
                     className="auth-input"
@@ -262,7 +250,7 @@ const Login: React.FC = () => {
                     <IonInput
                       type={showPassword ? 'text' : 'password'}
                       value={formData.password}
-                      onIonInput={(e) => handleInputChange('password', e.detail.value!)}
+                      onIonInput={(e) => handleInputChange('password', e.detail.value || '')}
                       placeholder="••••••••"
                       required
                       className="auth-input"
@@ -294,7 +282,26 @@ const Login: React.FC = () => {
                   </div>
                 </IonItem>
 
-                {/* Error message */}
+                {/* 🔹 hCaptcha */}
+                <HCaptchaComponent
+                  siteKey={HCAPTCHA_SITE_KEY}
+                  onTokenChange={(token) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      hCaptchaToken: token || '',
+                    }));
+                    if (token) setHCaptchaError(null);
+                  }}
+                  onErrorChange={(msg) => setHCaptchaError(msg)}
+                />
+
+                {hCaptchaError && (
+                  <IonText color="danger" className="error-text">
+                    <p>{hCaptchaError}</p>
+                  </IonText>
+                )}
+
+                {/* Error message general */}
                 {error && (
                   <IonText color="danger" className="error-text">
                     <p>{error}</p>
@@ -306,7 +313,12 @@ const Login: React.FC = () => {
                   type="submit"
                   expand="block"
                   className="auth-submit-button"
-                  disabled={isLoading || !formData.email || !formData.password}
+                  disabled={
+                    isLoading ||
+                    !formData.email ||
+                    !formData.password ||
+                    !formData.hCaptchaToken // 👈 NO deja enviar si no hay token
+                  }
                 >
                   {isLoading ? (
                     <IonSpinner name="crescent" />
@@ -351,4 +363,3 @@ const Login: React.FC = () => {
 };
 
 export default Login;
-
