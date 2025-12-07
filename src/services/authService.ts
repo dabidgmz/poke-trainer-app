@@ -369,6 +369,27 @@ class AuthService {
     return result;
   }
 
+  async verifyTrainerCode(data: VerifyCodeData): Promise<LoginResponse> {
+    const response = await fetch(`${API_URL}/auth/verify-trainer-code`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Error al verificar el código');
+    }
+
+    const result = await response.json();
+    
+    if (result.token) {
+      this.setToken(result.token);
+    }
+
+    return result;
+  }
+
   async resendCode(data: ResendCodeData): Promise<{ message: string; expiresIn: string }> {
     const response = await fetch(`${API_URL}/auth/resend-code`, {
       method: 'POST',

@@ -22,6 +22,8 @@ import { lockClosed, refresh, arrowBack, checkmarkCircle } from 'ionicons/icons'
 import { useHistory, useLocation } from 'react-router-dom';
 import authService, { User } from '../services/authService';
 import './VerifyCode.css';
+import HCaptchaComponent from '../components/HCaptcha';
+import { HCAPTCHA_SITE_KEY } from '../config/hcaptcha';
 
 interface LocationState {
   email: string;
@@ -37,10 +39,13 @@ const VerifyCode: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showErrorAlert, setShowErrorAlert] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [hCaptchaToken, setHCaptchaToken] = useState<string | null>(null);
+  const [hCaptchaError, setHCaptchaError] = useState<string | null>(null);
   const inputRefs = useRef<(HTMLIonInputElement | null)[]>([]);
 
   const email = location.state?.email || '';
   const user = location.state?.user;
+  const isTrainer = user?.role === 'entrenador';
 
   useEffect(() => {
     // Si no hay email, redirigir a login
@@ -96,23 +101,48 @@ const VerifyCode: React.FC = () => {
       return;
     }
 
+    // Validar hCaptcha para entrenadores
+    if (isTrainer && !hCaptchaToken) {
+      setHCaptchaError('Por favor completa el captcha antes de continuar.');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
+    setHCaptchaError(null);
 
     try {
-      const response = await authService.verifyCode({
+      const verifyData = {
         email,
         code: codeString,
-      });
+        hCaptchaToken: hCaptchaToken || '',
+      };
+
+      const response = isTrainer
+        ? await authService.verifyTrainerCode(verifyData)
+        : await authService.verifyCode(verifyData);
 
       if (response.token) {
-        history.push('/tab1');
+        // Asegurarse de que el token se guardó correctamente
+        const token = authService.getToken();
+        if (token) {
+          // Forzar actualización del estado de autenticación disparando un evento de storage
+          // Esto hará que App.tsx detecte el cambio y muestre las tabs
+          window.dispatchEvent(new Event('storage'));
+          
+          // Usar window.location para forzar un refresh completo y asegurar que App.tsx detecte el token
+          // Esto es más confiable que history.push cuando hay cambios en el estado de autenticación
+          window.location.href = '/tab1';
+        } else {
+          throw new Error('Error al guardar el token de autenticación');
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Código inválido. Por favor intenta nuevamente.');
       setShowErrorAlert(true);
       // Limpiar código en caso de error
       setCode(['', '', '', '', '', '']);
+      setHCaptchaToken(null);
       inputRefs.current[0]?.setFocus();
     } finally {
       setIsLoading(false);
@@ -120,11 +150,21 @@ const VerifyCode: React.FC = () => {
   };
 
   const handleResendCode = async () => {
+    // Para entrenadores, necesitamos hCaptchaToken para reenviar
+    if (isTrainer && !hCaptchaToken) {
+      setHCaptchaError('Por favor completa el captcha antes de reenviar el código.');
+      return;
+    }
+
     setIsResending(true);
     setError(null);
+    setHCaptchaError(null);
 
     try {
-      await authService.resendCode(email);
+      await authService.resendCode({
+        email,
+        hCaptchaToken: hCaptchaToken || '',
+      });
       setCountdown(60); // 60 segundos de espera
     } catch (err: any) {
       setError(err.message || 'Error al reenviar el código');
@@ -186,6 +226,25 @@ const VerifyCode: React.FC = () => {
                 ))}
               </div>
 
+              {/* hCaptcha para entrenadores */}
+              {isTrainer && (
+                <>
+                  <HCaptchaComponent
+                    siteKey={HCAPTCHA_SITE_KEY}
+                    onTokenChange={(token) => {
+                      setHCaptchaToken(token);
+                      if (token) setHCaptchaError(null);
+                    }}
+                    onErrorChange={(msg) => setHCaptchaError(msg)}
+                  />
+                  {hCaptchaError && (
+                    <IonText color="danger" className="error-text">
+                      <p>{hCaptchaError}</p>
+                    </IonText>
+                  )}
+                </>
+              )}
+
               {/* Error message */}
               {error && (
                 <IonText color="danger" className="error-text">
@@ -197,7 +256,7 @@ const VerifyCode: React.FC = () => {
               <IonButton
                 expand="block"
                 className="auth-submit-button"
-                disabled={!isCodeComplete || isLoading}
+                disabled={!isCodeComplete || isLoading || (isTrainer && !hCaptchaToken)}
                 onClick={handleVerify}
               >
                 {isLoading ? (
@@ -219,7 +278,7 @@ const VerifyCode: React.FC = () => {
                   fill="clear"
                   size="small"
                   onClick={handleResendCode}
-                  disabled={isResending || countdown > 0}
+                  disabled={isResending || countdown > 0 || (isTrainer && !hCaptchaToken)}
                   className="resend-button"
                 >
                   {isResending ? (
