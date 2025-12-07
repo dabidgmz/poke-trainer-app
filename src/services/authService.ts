@@ -436,4 +436,5 @@ class AuthService {
   }
 }
 
+export type { User };
 export default new AuthService();
