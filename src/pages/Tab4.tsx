@@ -425,6 +425,7 @@ const Tab4: React.FC = () => {
         rarity: 'common',
         placement: 'team',
         types: [newPokemon.type],
+        spriteUrl: newPokemon.img
       });
 
       setNewPokemon(null);
@@ -535,6 +536,7 @@ const Tab4: React.FC = () => {
           placement: result.placement,
           pcBox: result.pcBox,
           types,
+          spriteUrl
         });
 
         const alert = await alertController.create({
@@ -598,6 +600,7 @@ const Tab4: React.FC = () => {
         placement: 'pc',
         pcBox: result.pcBox,
         types,
+        spriteUrl
       });
 
       const alert = await alertController.create({
