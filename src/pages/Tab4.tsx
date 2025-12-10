@@ -46,6 +46,7 @@ import ProfileButton from '../components/ProfileButton';
 import OfflineMessage from '../components/OfflineMessage';
 import offlineCache from '../services/offlineCache';
 import './Tab4.css';
+import { notifyPokemonCaptured } from '../services/notificationService';
 
 interface CapturedPokemon {
   id: number;
@@ -417,6 +418,15 @@ const Tab4: React.FC = () => {
   const confirmCapture = () => {
     if (newPokemon) {
       setCapturedPokemon(prev => [newPokemon, ...prev]);
+
+      // Notificación también aquí (para el modo simulado)
+      notifyPokemonCaptured({
+        name: newPokemon.name,
+        rarity: 'common',
+        placement: 'team',
+        types: [newPokemon.type],
+      });
+
       setNewPokemon(null);
       setShowCaptureAlert(false);
     }
@@ -518,6 +528,15 @@ const Tab4: React.FC = () => {
           ? `¡${pokemonName} agregado a tu equipo!${typesText ? `\nTipo: ${typesText}` : ''}`
           : `¡${pokemonName} guardado en Caja ${result.pcBox}!${typesText ? `\nTipo: ${typesText}` : ''}`;
         
+        // 🔔 Notificación local
+        await notifyPokemonCaptured({
+          name: pokemonName,
+          rarity,
+          placement: result.placement,
+          pcBox: result.pcBox,
+          types,
+        });
+
         const alert = await alertController.create({
           header: '¡Pokémon Capturado!',
           message: message,
@@ -572,6 +591,15 @@ const Tab4: React.FC = () => {
         ? types.map(t => (t || '').charAt(0).toUpperCase() + (t || '').slice(1)).join(' / ')
         : '';
       
+      // Notificación local
+      await notifyPokemonCaptured({
+        name: pokemonName,
+        rarity,
+        placement: 'pc',
+        pcBox: result.pcBox,
+        types,
+      });
+
       const alert = await alertController.create({
         header: '¡Pokémon Capturado!',
         message: `Has capturado a ${pokemonName} (${rarity.charAt(0).toUpperCase() + rarity.slice(1)})${typesText ? `\nTipo: ${typesText}` : ''}\nSe guardó en la caja ${result.pcBox} del PC.`,

@@ -31,6 +31,7 @@ import VerifyCode from './pages/VerifyCode';
 import VerifyEmail from './pages/VerifyEmail';
 import ProtectedRoute from './components/ProtectedRoute';
 import authService from './services/authService';
+import { initNotifications } from './services/notificationService';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -180,6 +181,10 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  useEffect(() => {
+    initNotifications();
+  }, []);
+
   return (
     <IonApp>
       <IonReactRouter>
